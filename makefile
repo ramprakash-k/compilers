@@ -1,6 +1,6 @@
 all: lex.cc parse.cc main.cc Scanner.h Scannerbase.h Scanner.ih Parser.h Parserbase.h Parser.ih
 	g++ --std=c++0x lex.cc parse.cc main.cc;
-	./a.out <test2.in;
+	./a.out <test.in;
 	make -f codegen
 
 lex.cc: lex.l Scanner.ih 
