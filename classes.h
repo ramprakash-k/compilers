@@ -312,6 +312,8 @@ public:
 
 class exp_ast : public abstract_astnode {
 public:
+	list<int> truelist;
+	list<int> falselist;
 	string result;
 	bool isImmediate;
 	void load() {}
@@ -603,12 +605,10 @@ public:
 		string reg = expr->result;
 		if(expr->isImmediate) {
 			reg = regman.allocate(expr->getType().type);
-			code<<"l"<<++label<<": "
-				<<"move("<<expr->result<<","<<reg<<");"<<endl;
+			code<<"\tmove("<<expr->result<<","<<reg<<");"<<endl;
 		}
 		if(oper == '-') {
-			code<<"l"<<++label<<": "
-				<<"mul"<<((expr->getType().type==cint)?"i":"f")
+			code<<"\tmul"<<((expr->getType().type==cint)?"i":"f")
 				<<"(-1,"<<reg<<");"<<endl;
 		} else if(oper == '!') {
 
@@ -786,8 +786,7 @@ public:
 	void generate_code() {
 		basicType t = getType().type;
 		string reg = regman.allocate(t);
-		code<<"l"<<++label<<": "
-			<<"load"<<((t==cint)?"i":"f")
+		code<<"\tload"<<((t==cint)?"i":"f")
 			<<"(ind(ebp,"<<get_offset()<<"),"<<reg<<");"<<endl;
 
 		result = reg;
