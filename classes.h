@@ -13,6 +13,7 @@
 using namespace std;
 
 extern int offset;
+
 extern int size;
 extern stringstream code;
 extern int label;
@@ -281,7 +282,7 @@ public:
 		return glo[s]->local_size();
 	}
 	void set_l_sym(string name) {
-		if(glo.find(name)==glo.end()) 
+		if(glo.find(name)==glo.end())
 		{
 			cerr<<"Error: No entry for "<<name<<" in global symbol table"<<endl;
 			return;
@@ -560,7 +561,7 @@ public:
 			code<<"\tdiv"<<((expr1->getType().type==cint)?"i":"f")
 				<<"("<<expr1->result<<","<<reg<<");"<<endl;code_line++;
 		}
-		
+
 		if(!expr1->isImmediate)
 		{
 			cout<<"Free e1 of op"<<endl;
