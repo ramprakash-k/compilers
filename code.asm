@@ -1,7 +1,13 @@
 void main() {
 	pushi (ebp);
 	move (esp,ebp);
-	addi (-4,esp);
+	addi (-12,esp);
+	storei(10,ind(ebp,-4));
+	storei(5,ind(ebp,-12));
+	storei(0,ind(ebp,-8));
+l1:	loadi(ind(ebp,-12),eax);
+	cmpi(0,eax);
+	je(l2);
 	loadi(ind(ebp,-4),eax);
 	loadi(ind(ebp,-4),ebx);
 	loadi(ind(ebp,-4),ecx);
@@ -33,7 +39,18 @@ void main() {
 	loadi(ind(esp),eax);
 	popi(1);
 	addi(eax,edx);
-	addi (4,esp);
+	storei(edx,ind(ebp,-4));
+	loadi(ind(ebp,-12),edx);
+	move(1,eax);
+	muli(-1,eax);
+	addi(edx,eax);
+	storei(eax,ind(ebp,-12));
+	storei(1,ind(ebp,-8));
+	j(l1);
+l2:	loadi(ind(ebp,-4),eax);
+	print_int(eax);
+	print_string("\n");
+	addi (12,esp);
 	loadi (ind(esp),ebp);
 	popi(1);
 }

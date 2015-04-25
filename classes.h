@@ -584,7 +584,7 @@ public:
 		} else if(oper == '-') {
 			code<<"\tmul"<<((expr1->getType().type==cint)?"i":"f")
 				<<"(-1,"<<reg2<<");"<<endl
-				<<"add"<<((expr1->getType().type==cint)?"i":"f")
+				<<"\tadd"<<((expr1->getType().type==cint)?"i":"f")
 				<<"("<<reg1<<","<<reg2<<");"<<endl;code_line++;code_line++;
 		} else if(oper == '*') {
 			code<<"\tmul"<<((expr1->getType().type==cint)?"i":"f")
@@ -697,6 +697,17 @@ public:
 		}
 		expr[i] = castast;
 	}
+	void generate_code() {
+		if(name=="printf")
+		{
+			for(int i=0;i<(int)(expr.size());i++)
+			{
+				expr[i]->generate_code();
+				code<<"\tprint_"<<((expr[i]->getType().type==cint)?"int":((expr[i]->getType().type==cfloat)?"float":"string"))
+					<<"("<<expr[i]->result<<");"<<endl;code_line++;
+			}
+		}
+	}
 private:
 	vector<exp_ast *> expr;
 	string name;
@@ -737,6 +748,17 @@ public:
 			castast = new cast_float_ast(expr[i]);
 		}
 		expr[i] = castast;
+	}
+	void generate_code() {
+		if(name=="printf")
+		{
+			for(int i=0;i<(int)(expr.size());i++)
+			{
+				expr[i]->generate_code();
+				code<<"\tprint_"<<((expr[i]->getType().type==cint)?"int":((expr[i]->getType().type==cfloat)?"float":"string"))
+					<<"("<<expr[i]->result<<");"<<endl;code_line++;
+			}
+		}
 	}
 private:
 	vector<exp_ast *> expr;
@@ -850,9 +872,9 @@ public:
 		code<<"\tcmp"<<((expr->getType().type==cint)?"i":"f")<<"(0,"<<reg<<");"<<endl;code_line++;
 		if(!expr->isImmediate)
 			regman.free(reg);
-		code<<"\tje("<<++label<<");"<<endl;code_line++;int temp=label;
+		code<<"\tje(l"<<++label<<");"<<endl;code_line++;int temp=label;
 		then->generate_code();
-		code<<"\tj("<<++label<<");"<<endl;code_line++;int temp2=label;
+		code<<"\tj(l"<<++label<<");"<<endl;code_line++;int temp2=label;
 		code<<"l"<<temp<<":";
 		els->generate_code();
 		code<<"l"<<temp2<<":";
@@ -888,12 +910,12 @@ public:
 		code<<"\tcmp"<<((expr2->getType().type==cint)?"i":"f")<<"(0,"<<reg<<");"<<endl;code_line++;
 		if(!expr2->isImmediate)
 			regman.free(reg);
-		code<<"\tje("<<(m2==++label)<<");"<<endl;code_line++;
+		code<<"\tje(l"<<(m2=++label)<<");"<<endl;code_line++;
 		body->generate_code();
 		expr3->generate_code();
 		if(!expr2->isImmediate)
 			regman.free(expr2->result);
-		code<<"\tj("<<m1<<");"<<endl;code_line++;
+		code<<"\tj(l"<<m1<<");"<<endl;code_line++;
 		code<<"l"<<m2<<":";
 	}
 private:
@@ -922,9 +944,9 @@ public:
 		code<<"\tcmp"<<((expr->getType().type==cint)?"i":"f")<<"(0,"<<reg<<");"<<endl;code_line++;
 		if(!expr->isImmediate)
 			regman.free(reg);
-		code<<"\tje("<<(m2=++label)<<");"<<endl;code_line++;
+		code<<"\tje(l"<<(m2=++label)<<");"<<endl;code_line++;
 		body->generate_code();
-		code<<"\tj("<<m1<<");"<<endl;code_line++;
+		code<<"\tj(l"<<m1<<");"<<endl;code_line++;
 		code<<"l"<<m2<<":";
 	}
 private:

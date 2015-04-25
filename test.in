@@ -1,5 +1,12 @@
 void main()
 {
-	int a;
-	a = a+(a+(a+(a+(a+(a+(a+(a+(a+a))))))));
+	int a,i,b;
+	b=(a=10);
+	i=(b=5);
+	for(i=0;b;i=1)
+	{
+		i = (a = a+(a+(a+(a+(a+(a+(a+(a+(a+a)))))))));
+		b = (b=(b-1));
+	}
+	printf(a,"\n");
 }
