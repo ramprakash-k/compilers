@@ -316,6 +316,8 @@ public:
 
 class exp_ast : public abstract_astnode {
 public:
+	list<int> truelist;
+	list<int> falselist;
 	string result;
 	bool isImmediate;
 	void load() {}
