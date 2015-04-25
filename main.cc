@@ -24,6 +24,7 @@ int main ()
 	// string s;
 	for (map<std::string,abstract_astnode *>::iterator i = ast.begin(); i != ast.end(); ++i)
 	{
+		g_sym.set_l_sym(i->first);
 		code<<"void "<<i->first<<"() {"<<endl;code_line++;
 		code<<"\tpushi (ebp);"<<endl;code_line++;
 		code<<"\tmove (esp,ebp);"<<endl;code_line++;

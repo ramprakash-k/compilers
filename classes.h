@@ -208,6 +208,9 @@ public:
 	}
 	basicType ret_type;
 	int return_offset;
+	int get_offset(string name) {
+		return local[name]->get_off();
+	}
 private:
 	vector<l_entry *> params;
 	map<string, l_entry *> local;
@@ -234,6 +237,9 @@ public:
 	}
 	int local_size() {
 		return l_sym->local_size();
+	}
+	void set_l_sym() {
+		::l_sym = this->l_sym;
 	}
 private:
 	basicType type;
@@ -273,6 +279,15 @@ public:
 	}
 	int local_size(string s) {
 		return glo[s]->local_size();
+	}
+	void set_l_sym(string name) {
+		if(glo.find(name)==glo.end()) 
+		{
+			cerr<<"Error: No entry for "<<name<<" in global symbol table"<<endl;
+			return;
+		}
+		g_entry *entry = glo[name];
+		entry->set_l_sym();
 	}
 private:
 	map<string,g_entry *> glo;
@@ -383,8 +398,14 @@ public:
 	}
 	void generate_code() {
 		expr->generate_code();
-		code<<"\tfloatToint("<<expr->result
-			<<";"<<endl;code_line++;
+		string reg = expr->result;
+		if(expr->isImmediate) {
+			reg = regman.allocate(expr->getType().type);
+			code<<"\tmove("<<expr->result<<","<<reg<<");"<<endl;code_line++;
+		}
+		code<<"\tfloatToint("<<reg<<");"<<endl;code_line++;
+		result=reg;
+		isImmediate = false;
 	}
 private:
 	exp_ast *expr;
@@ -401,8 +422,14 @@ public:
 	}
 	void generate_code() {
 		expr->generate_code();
-		code<<"\tintTofloat("<<expr->result
-			<<";"<<endl;code_line++;
+		string reg = expr->result;
+		if(expr->isImmediate) {
+			reg = regman.allocate(expr->getType().type);
+			code<<"\tmove("<<expr->result<<","<<reg<<");"<<endl;code_line++;
+		}
+		code<<"\tintTofloat("<<reg<<");"<<endl;code_line++;
+		result = reg;
+		isImmediate = false;
 	}
 private:
 	exp_ast *expr;
@@ -418,9 +445,23 @@ public:
 	void print(int n) {
 		cout<<"(ArrayRef "; expr1->print(0); cout<<" "; expr2->print(0); cout<<")";
 	}
+	void generate_address() {
+
+	}
+	void generate_code() {
+		basicType t = getType().type;
+		string reg = regman.allocate(t);
+		code<<"\tload"<<((t==cint)?"i":"f")
+			<<"(ind(ebp,"<<get_offset()<<"),"<<reg<<");"<<endl;code_line++;
+
+		result = reg;
+		isImmediate = false;
+	}
 private:
+	int get_offset() {
+		return 0; //l_sym->get_array();
+	}
 	exp_ast *expr1, *expr2;
-	int lval;
 };
 
 class ass_ast : public stmt_ast {			// TODO
@@ -503,23 +544,28 @@ public:
 		if(!expr1->isImmediate) regman.prepare(reg);
 		if(oper == '=') {
 			code<<"\tstore"<<((expr1->getType().type==cint)?"i":"f")
-				<<"("<<reg<<",ind("<<expr1->result<<"));"<<endl;
+				<<"("<<reg<<",ind("<<expr1->result<<"));"<<endl;code_line++;
 		} else if(oper == '+') {
 			code<<"\tadd"<<((expr1->getType().type==cint)?"i":"f")
-				<<"("<<expr1->result<<","<<reg<<");"<<endl;
+				<<"("<<expr1->result<<","<<reg<<");"<<endl;code_line++;
 		} else if(oper == '-') {
 			code<<"\tmul"<<((expr1->getType().type==cint)?"i":"f")
 				<<"(-1,"<<reg<<");"<<endl
 				<<"add"<<((expr1->getType().type==cint)?"i":"f")
-				<<"("<<expr1->result<<","<<reg<<");"<<endl;
+				<<"("<<expr1->result<<","<<reg<<");"<<endl;code_line++;code_line++;
 		} else if(oper == '*') {
 			code<<"\tmul"<<((expr1->getType().type==cint)?"i":"f")
-				<<"("<<expr1->result<<","<<reg<<");"<<endl;
+				<<"("<<expr1->result<<","<<reg<<");"<<endl;code_line++;
 		} else if(oper == '/') {
 			code<<"\tdiv"<<((expr1->getType().type==cint)?"i":"f")
-				<<"("<<expr1->result<<","<<reg<<");"<<endl;
+				<<"("<<expr1->result<<","<<reg<<");"<<endl;code_line++;
 		}
-		regman.free();
+		
+		if(!expr1->isImmediate)
+		{
+			cout<<"Free e1 of op"<<endl;
+			regman.free();
+		}
 		result = reg;
 		isImmediate = false;
 		cout<<result<<" "<<isImmediate<<endl;
@@ -730,12 +776,31 @@ public:
 	void print(int n) {
 		cout<<"(Id \""<<c<<"\")";
 	}
+	void generate_address() {
+		int off = get_offset();
+		char offc[10];
+		sprintf(offc,"%d",off);
+		result = offc;
+		isImmediate = true;
+	}
+	void generate_code() {
+		basicType t = getType().type;
+		string reg = regman.allocate(t);
+		code<<"l"<<++label<<": "
+			<<"load"<<((t==cint)?"i":"f")
+			<<"(ind(ebp,"<<get_offset()<<"),"<<reg<<");"<<endl;
+
+		result = reg;
+		isImmediate = false;
+	}
 private:
+	int get_offset() {
+		return l_sym->get_offset(c);
+	}
 	string c;
 };
 
-class if_ast : public stmt_ast
-{
+class if_ast : public stmt_ast {
 public:
 	if_ast(exp_ast *e, stmt_ast *s1, stmt_ast *s2) {
 		expr=e; then=s1; els=s2;
@@ -749,8 +814,7 @@ private:
 	exp_ast *expr; stmt_ast *then, *els;
 };
 
-class for_ast : public stmt_ast
-{
+class for_ast : public stmt_ast {
 public:
 	for_ast(exp_ast *e1, exp_ast *e2, exp_ast *e3, stmt_ast *s) {
 		expr1=e1; expr2=e2; expr3=e3; body=s;
@@ -765,8 +829,7 @@ private:
 	exp_ast *expr1, *expr2, *expr3; stmt_ast *body;
 };
 
-class while_ast : public stmt_ast
-{
+class while_ast : public stmt_ast {
 public:
 	while_ast(exp_ast *e, stmt_ast *s) {
 		expr=e; body=s;
