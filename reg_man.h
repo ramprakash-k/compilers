@@ -9,56 +9,49 @@ using namespace std;
 
 #define NUMREG 6
 
-#define NEXT(cur) (cur+1)%NUMREG
-#define PREV(cur) (cur+NUMREG-1)%NUMREG
-
 class RegMan {
 public:
 	string allocate(basicType t) {
 		cout<<"Allocate"<<endl;
-		if(!status[cur]) {
-			moveToStack(cur);
-			fcount[cur]++;
-		} else {
-			status[cur] = false;
-		}
-		string reg = numtoreg(cur);
-		cur = NEXT(cur);
-		types.push_back(t);
+		int r = regs.front();
+		string reg = numtoreg(r);
+		regs.pop_front();
+		used.push_back(r);
+		types[r].push_back(t);
 		return reg;
 	}
-	void free() {
+	void free(string reg) {
 		cout<<"Free"<<endl;
-		cur = PREV(cur);
-		status[cur] = true;
-		types.pop_back();
+		int r = regtonum(reg);
+		used.remove(r);
+		regs.push_front(r);
+		types[r].pop_back();
 		cout<<"FreeEnd"<<endl;
 	}
-	void prepare(string reg) {
-		int right = regtonum(reg);
-		int left = NEXT(right);
+	void prepare(string reg, string rr) {
+		int left = regtonum(reg);
+		int right = regtonum(rr);
+
 		if(fcount[left] == fcount[right]) {
 			return;
-		} else if(fcount[right] == fcount[left]+1) {
-			getFromStack(right);
+		} else if(fcount[right]+1 == fcount[left]) {
+			getFromStack(left);
 			fcount[right]--;
-		} else {
-			cerr<<"Error: Register Manager"<<endl;
+		} else if(fcount[right] != fcount[left]+1) {
+			cerr<<"Error: Register Manager "<<reg<<" "<<fcount[left]<<" "<<fcount[right]<<endl;
 		}
 	}
 	RegMan() {
-		cur = 0;
-		for (int i = 0; i < NUMREG; ++i)
-		{
-			status[i] = true;
+		for (int i = 0; i < NUMREG; ++i) {
+			regs.push_back(i);
 			fcount[i] = 0;
 		}
 	}
 private:
-	int cur;
-	bool status[NUMREG];
+	list<int> regs;
+	list<int> used;
 	int fcount[NUMREG];
-	vector<basicType> types;
+	vector<basicType> types[NUMREG];
 	string numtoreg(int n) {
 		if(n<4)return string("e")+char('a'+n)+"x";
 		if(n==4) return string("edi");
@@ -71,19 +64,20 @@ private:
 	}
 	void moveToStack(int r) {
 		string reg = numtoreg(r);
-		code<<"\tpush"<<(types[types.size()-4]==cfloat?"f":"i")
+		vector<basicType> &vtypes = types[r];
+
+		code<<"\tpush"<<(vtypes[vtypes.size()-1]==cfloat?"f":"i")
 			<<"("<<reg<<");"<<endl;code_line++;
 	}
 	void getFromStack(int r) {
 		string reg = numtoreg(r);
-		code<<"\tload"<<(types[types.size()-1]==cfloat?"f":"i")
+		vector<basicType> &vtypes = types[r];
+
+		code<<"\tload"<<(vtypes[vtypes.size()-1]==cfloat?"f":"i")
 			<<"(ind(esp),"<<reg<<");"<<endl;code_line++;
-		code<<"pop"<<(types[types.size()-1]==cfloat?"f":"i")
+		code<<"pop"<<(vtypes[vtypes.size()-1]==cfloat?"f":"i")
 			<<"(1);"<<endl;code_line++;
 	}
 };
-
-#undef NEXT
-#undef PREV
 
 #endif // REG_MAN_H
