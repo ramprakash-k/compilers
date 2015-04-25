@@ -8,7 +8,6 @@
 #include <map>
 #include <stdlib.h>
 #include <sstream>
-#include "reg_man.h"
 #include "basic.h"
 using namespace std;
 
@@ -18,6 +17,9 @@ extern stringstream code;
 extern int label;
 extern int code_line;
 extern local_sym  *l_sym;
+
+#include "reg_man.h"
+
 extern RegMan regman;
 
 static string btToString(basicType t) {
@@ -809,6 +811,24 @@ public:
 		spaces(n+4); then->print(n+4); cout<<endl;
 		spaces(n+4); els->print(n+4); cout<<")";
 	}
+	void generate_code() {
+		expr->generate_code();
+		string reg = expr->result;
+		if(expr->isImmediate)
+		{
+			reg = regman.allocate(expr->getType().type);
+			code<<"\tmove("<<expr->result<<","<<reg<<");"<<endl;code_line++;
+		}
+		code<<"\tcmp"<<((expr->getType().type==cint)?"i":"f")<<"(0,"<<reg<<");"<<endl;code_line++;
+		if(!expr->isImmediate)
+			regman.free(reg);
+		code<<"\tje("<<++label<<");"<<endl;code_line++;int temp=label;
+		then->generate_code();
+		code<<"\tj("<<++label<<");"<<endl;code_line++;int temp2=label;
+		code<<"l"<<temp<<":";
+		els->generate_code();
+		code<<"l"<<temp2<<":";
+	}
 private:
 	exp_ast *expr; stmt_ast *then, *els;
 };
@@ -824,6 +844,30 @@ public:
 		spaces(n+5); expr3->print(n+5); cout<<endl;
 		spaces(n+5); body->print(n+5); cout<<")";
 	}
+	void generate_code() {
+		expr1->generate_code();
+		if(!expr1->isImmediate)
+			regman.free(expr1->result);
+		int m1,m2,m3;
+		code<<"l"<<(m1=++label)<<":";
+		expr2->generate_code();
+		string reg = expr2->result;
+		if(expr2->isImmediate)
+		{
+			reg = regman.allocate(expr2->getType().type);
+			code<<"\tmove("<<expr2->result<<","<<reg<<");"<<endl;code_line++;
+		}
+		code<<"\tcmp"<<((expr->getType().type==cint)?"i":"f")<<"(0,"<<reg<<");"<<endl;code_line++;
+		if(!expr2->isImmediate)
+			regman.free(reg);
+		code<<"\tje("<<(m2==++label)<<");"<<endl;code_line++;
+		body->generate_code();
+		expr3->generate_code();
+		if(!expr2->isImmediate)
+			regman.free(expr2->result);
+		code<<"\tj("<<m1<<");"<<endl;code_line++;
+		code<<"l"<<m2<<":";
+	}
 private:
 	exp_ast *expr1, *expr2, *expr3; stmt_ast *body;
 };
@@ -836,6 +880,24 @@ public:
 	void print(int n) {
 		cout<<"(While "; expr->print(0); cout<<endl;
 		spaces(n+7); body->print(n+7); cout<<")";
+	}
+	void generate_code() {
+		int m1,m2;
+		code<<"l"<<(m1=++label)<<":";
+		expr->generate_code();
+		string reg = expr->result;
+		if(expr->isImmediate)
+		{
+			reg = regman.allocate(expr->getType().type);
+			code<<"\tmove("<<expr->result<<","<<reg<<");"<<endl;code_line++;
+		}
+		code<<"\tcmp"<<((expr->getType().type==cint)?"i":"f")<<"(0,"<<reg<<");"<<endl;code_line++;
+		if(!expr->isImmediate)
+			regman.free(reg);
+		code<<"\tje("<<(m2=++label)<<");"<<endl;code_line++;
+		body->generate_code();
+		code<<"\tj("<<m1<<");"<<endl;code_line++;
+		code<<"l"<<m2<<":";
 	}
 private:
 	exp_ast *expr; stmt_ast *body;
