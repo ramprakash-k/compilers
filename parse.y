@@ -449,7 +449,7 @@ relational_expression
 			e2 = new cast_float_ast($3);
 		}
 
-		else if(!($1->getType()==$3->getType()))
+		if(!(e1->getType()==e2->getType()))
 		{
 			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
@@ -482,7 +482,7 @@ relational_expression
 			e2 = new cast_float_ast($3);
 		}
 
-		if(!($1->getType()==$3->getType()))
+		if(!(e1->getType()==e2->getType()))
 		{
 			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
@@ -515,7 +515,7 @@ relational_expression
 			e2 = new cast_float_ast($3);
 		}
 
-		if(!($1->getType()==$3->getType()))
+		if(!(e1->getType()==e2->getType()))
 		{
 			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
@@ -547,7 +547,7 @@ relational_expression
 			e2 = new cast_float_ast($3);
 		}
 
-		if(!($1->getType()==$3->getType()))
+		if(!(e1->getType()==e2->getType()))
 		{
 			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
@@ -618,7 +618,7 @@ additive_expression
 			e2 = new cast_float_ast($3);
 		}
 
-		if(!($1->getType()==$3->getType()))
+		if(!(e1->getType()==e2->getType()))
 		{
 			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
@@ -657,7 +657,7 @@ multiplicative_expression
 			e2 = new cast_float_ast($3);
 		}
 
-		if(!($1->getType()==$3->getType()))
+		if(!(e1->getType()==e2->getType()))
 		{
 			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
@@ -689,7 +689,7 @@ multiplicative_expression
 			e2 = new cast_float_ast($3);
 		}
 
-		if(!($1->getType()==$3->getType()))
+		if(!(e1->getType()==e2->getType()))
 		{
 			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
@@ -832,7 +832,7 @@ primary_expression
 			e2 = new cast_float_ast($3);
 		}
 
-		if(!($1->getType()==$3->getType()))
+		if(!(e1->getType()==e2->getType()))
 		{
 			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
