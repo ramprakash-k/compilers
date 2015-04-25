@@ -390,7 +390,7 @@ public:
 			<<"\tpopi(1);"<<endl
 			<<"\treturn;"<<endl;code_line+=3;
 
-		if(!expr->isImmediate) regman.free(expr);
+		if(!expr->isImmediate) regman.free(expr->result);
 	}
 private:
 	exp_ast *expr;
@@ -917,7 +917,7 @@ public:
 			reg = regman.allocate(expr2->getType().type);
 			code<<"\tmove("<<expr2->result<<","<<reg<<");"<<endl;code_line++;
 		}
-		code<<"\tcmp"<<((expr->getType().type==cint)?"i":"f")<<"(0,"<<reg<<");"<<endl;code_line++;
+		code<<"\tcmp"<<((expr2->getType().type==cint)?"i":"f")<<"(0,"<<reg<<");"<<endl;code_line++;
 		if(!expr2->isImmediate)
 			regman.free(reg);
 		code<<"\tje("<<(m2==++label)<<");"<<endl;code_line++;
