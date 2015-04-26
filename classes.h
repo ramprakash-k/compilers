@@ -1070,8 +1070,8 @@ public:
 		code<<"\tje(l"<<(m2=++label)<<");"<<endl;
 		body->generate_code();
 		expr3->generate_code();
-		if(!expr2->isImmediate)
-			regman.free(expr2->result);
+		if(!expr3->isImmediate)
+			regman.free(expr3->result);
 		code<<"\tj(l"<<m1<<");"<<endl;
 		code<<"l"<<m2<<":";
 	}
