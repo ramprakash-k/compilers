@@ -7,13 +7,13 @@
 #include <vector>
 #include <map>
 #include <stdlib.h>
-#include <sstream>
+#include <fstream>
 #include "basic.h"
 using namespace std;
 
 extern int offset;
 extern int size;
-extern stringstream code;
+extern ofstream code;
 extern int label;
 
 #include "reg_man.h"
@@ -574,7 +574,7 @@ public:
 		cout<<((expr1->getType().type==cint)?"_INT ":"_FLOAT "); expr1->print(0); cout<<" "; expr2->print(0); cout<<")";
 	}
 	void generate_code() {
-		cout<<"BinOp "<<oper<<endl;
+		cout<<"BinOp "<<(char)oper<<endl;
 		if(oper == '=') {
 			expr2->generate_code();
 			string reg2 = expr2->result;
@@ -699,7 +699,6 @@ public:
 		} else if(oper == '<') {
 			code<<"\tcmp"<<((expr1->getType().type==cint)?"i":"f")
 				<<"("<<reg1<<","<<reg2<<");"<<endl;
-			cout<<"HEEHHHEEEHHEE : "<<reg1<<endl;
 			if(expr1->getType().type==cfloat)
 				code<<"\tfloatToint("<<reg2<<");"<<endl;
 			int m1,m2;

@@ -65,4 +65,3 @@ l8:	print_string("\n");
 	addi (32,esp);
 	popi(1);
 }
-

@@ -1,9 +1,9 @@
 #!/bin/sh
 sed -i '/include <exception>/i#include "classes.h"' Parserbase.h;
 
-sed -i '/include "Parser.h"/a#include "gen_arr.h"' Parser.ih;
 sed -i '/include "Parser.h"/a#include "classes.h"' Parser.ih;
-sed -i '/include "classes.h"/a stringstream code;' Parser.ih;
+sed -i '/include "Parser.h"/a#include "gen_arr.h"' Parser.ih;
+sed -i '/include "classes.h"/a ofstream code;' Parser.ih;
 sed -i '/include "classes.h"/a local_sym *l_sym;' Parser.ih;
 sed -i '/include "classes.h"/a global_sym g_sym;' Parser.ih;
 sed -i '/include "classes.h"/a std::map<std::string,abstract_astnode *> ast;' Parser.ih;

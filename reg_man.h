@@ -12,8 +12,7 @@ using namespace std;
 class RegMan {
 public:
 	string allocate(basicType t) {
-		cout<<"Allocate"<<endl;
-
+		//cout<<"Allocate"<<endl;
 		if(regs.empty()) {
 			int x = used.front();
 			used.pop_front();
@@ -21,58 +20,48 @@ public:
 			fcount[x]++;
 			regs.push_back(x);
 		}
-
 		int r = regs.front();
 		string reg = numtoreg(r);
-
 		regs.pop_front();
 		used.push_back(r);
 		types[r].push_back(t);
 		return reg;
 	}
 	void free(string reg) {
-		cout<<"Free"<<endl;
+		//cout<<"Free"<<endl;
 		int r = regtonum(reg);
 		used.remove(r);
 		regs.push_front(r);
 		types[r].pop_back();
-		cout<<"FreeEnd"<<endl;
+		//cout<<"FreeEnd"<<endl;
 	}
 	void prepare(string &reg, string rr) {
 		int left = regtonum(reg);
 		int right = regtonum(rr);
-
 		if(left == right) {
-			cout<<"Same"<<endl;
+			//cout<<"Same"<<endl;
 			string newreg = allocate(types[left].back());
-
 			if(newreg == rr) {
-				cout<<"O_o"<<endl;
+				//cout<<"O_o"<<endl;
 				free(newreg);
 				newreg = allocate(types[left].back());
 			}
-
 			int nr = regtonum(newreg);
-
 			vector<basicType> &vtypes = types[left];
 			code<<"\tload"<<(vtypes[vtypes.size()-1]==cfloat?"f":"i")
 				<<"(ind(esp),"<<newreg<<");"<<endl;
 			code<<"\tpop"<<(vtypes[vtypes.size()-1]==cfloat?"f":"i")
 				<<"(1);"<<endl;
 			fcount[left]--;
-
 			vtypes.erase(vtypes.begin() + vtypes.size()-2);
-
 			reg = newreg;
-
 			return;
 		}
-
 		if(fcount[left] == fcount[right]) {
-			cout<<"Equal"<<endl;
+			//cout<<"Equal"<<endl;
 			return;
 		} else if(fcount[right]+1 == fcount[left]) {
-			cout<<"Get"<<endl;
+			//cout<<"Get"<<endl;
 			getFromStack(left);
 			fcount[left]--;
 			regs.remove(left);
@@ -81,13 +70,15 @@ public:
 			cerr<<"Error: Register Manager "<<reg<<" "<<fcount[left]<<" "<<fcount[right]<<endl;
 		}
 	}
+	int reg_in_use() {
+		return used.size();
+	}
 	RegMan() {
 		for (int i = 0; i < NUMREG; ++i) {
 			regs.push_back(i);
 			fcount[i] = 0;
 		}
 	}
-
 	~RegMan() {
 		for (int i = 0; i < NUMREG; ++i)
 		{
@@ -123,14 +114,12 @@ private:
 	void moveToStack(int r) {
 		string reg = numtoreg(r);
 		vector<basicType> &vtypes = types[r];
-
 		code<<"\tpush"<<(vtypes[vtypes.size()-1]==cfloat?"f":"i")
 			<<"("<<reg<<");"<<endl;
 	}
 	void getFromStack(int r) {
 		string reg = numtoreg(r);
 		vector<basicType> &vtypes = types[r];
-
 		code<<"\tload"<<(vtypes[vtypes.size()-1]==cfloat?"f":"i")
 			<<"(ind(esp),"<<reg<<");"<<endl;
 		code<<"\tpop"<<(vtypes[vtypes.size()-1]==cfloat?"f":"i")
