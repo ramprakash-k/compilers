@@ -55,12 +55,10 @@ public:
 			int nr = regtonum(newreg);
 
 			vector<basicType> &vtypes = types[left];
-
-			// code<<"\tmove("<<reg<<","<<newreg<<");"<<endl;code_line++;
 			code<<"\tload"<<(vtypes[vtypes.size()-1]==cfloat?"f":"i")
-				<<"(ind(esp),"<<newreg<<");"<<endl;code_line++;
+				<<"(ind(esp),"<<newreg<<");"<<endl;
 			code<<"\tpop"<<(vtypes[vtypes.size()-1]==cfloat?"f":"i")
-				<<"(1);"<<endl;code_line++;
+				<<"(1);"<<endl;
 			fcount[left]--;
 
 			vtypes.erase(vtypes.begin() + vtypes.size()-2);
@@ -127,16 +125,16 @@ private:
 		vector<basicType> &vtypes = types[r];
 
 		code<<"\tpush"<<(vtypes[vtypes.size()-1]==cfloat?"f":"i")
-			<<"("<<reg<<");"<<endl;code_line++;
+			<<"("<<reg<<");"<<endl;
 	}
 	void getFromStack(int r) {
 		string reg = numtoreg(r);
 		vector<basicType> &vtypes = types[r];
 
 		code<<"\tload"<<(vtypes[vtypes.size()-1]==cfloat?"f":"i")
-			<<"(ind(esp),"<<reg<<");"<<endl;code_line++;
+			<<"(ind(esp),"<<reg<<");"<<endl;
 		code<<"\tpop"<<(vtypes[vtypes.size()-1]==cfloat?"f":"i")
-			<<"(1);"<<endl;code_line++;
+			<<"(1);"<<endl;
 	}
 };
 

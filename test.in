@@ -1,12 +1,19 @@
 void main()
 {
-	int a,i,b;
-	b=(a=10);
-	i=(b=5);
+	int a,i,b,x[5];
+	a=10;
+	b=5;
 	for(i=0;b;i=1)
 	{
-		i = (a = a+(a+(a+(a+(a+(a+(a+(a+(a+a)))))))));
-		b = (b=(b-1));
+		a = 10*a;
+		b = (b-1);
+		x[b] = a;
 	}
-	printf(a,"\n");
+	b=5;
+	for(i=0;b;i=1)
+	{
+		b = (b-1);
+		printf(x[b]," ");
+	}
+	printf("\n");
 }

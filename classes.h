@@ -12,11 +12,9 @@
 using namespace std;
 
 extern int offset;
-
 extern int size;
 extern stringstream code;
 extern int label;
-extern int code_line;
 
 #include "reg_man.h"
 
@@ -323,7 +321,6 @@ public:
 	void load() {}
 	virtual void print(int n) = 0;
 	virtual void generate_code(){};
-	virtual void generate_address(){};
 	typeExp getType() {
 		return astnode_type;
 	}
@@ -383,20 +380,18 @@ public:
 	}
 	void generate_code() {
 		expr->generate_code();
-
 		code<<"\tstore"<<(l_sym->ret_type==cfloat?"f":"i")
-			<<"("<<expr->result<<", ind(ebp, "<<l_sym->return_offset<<"));"<<endl;code_line++;
+			<<"("<<expr->result<<",ind(ebp,"<<l_sym->return_offset<<"));"<<endl;
 		code<<"\tloadi(ind(ebp), ebp);"<<endl
+			<<"\taddi ("<<-(l_sym->local_size())<<",esp);"<<endl
 			<<"\tpopi(1);"<<endl
-			<<"\treturn;"<<endl;code_line+=3;
-
+			<<"\treturn;"<<endl;
 		if(!expr->isImmediate) regman.free(expr->result);
 	}
 private:
 	exp_ast *expr;
 };
 
-// Done
 class cast_int_ast : public exp_ast {
 public:
 	cast_int_ast(exp_ast *e) {
@@ -411,9 +406,9 @@ public:
 		string reg = expr->result;
 		if(expr->isImmediate) {
 			reg = regman.allocate(expr->getType().type);
-			code<<"\tmove("<<expr->result<<","<<reg<<");"<<endl;code_line++;
+			code<<"\tmove("<<expr->result<<","<<reg<<");"<<endl;
 		}
-		code<<"\tfloatToint("<<reg<<");"<<endl;code_line++;
+		code<<"\tfloatToint("<<reg<<");"<<endl;
 		result=reg;
 		isImmediate = false;
 	}
@@ -421,7 +416,6 @@ private:
 	exp_ast *expr;
 };
 
-// Done
 class cast_float_ast : public exp_ast {
 public:
 	cast_float_ast(exp_ast *e) {
@@ -436,9 +430,9 @@ public:
 		string reg = expr->result;
 		if(expr->isImmediate) {
 			reg = regman.allocate(expr->getType().type);
-			code<<"\tmove("<<expr->result<<","<<reg<<");"<<endl;code_line++;
+			code<<"\tmove("<<expr->result<<","<<reg<<");"<<endl;
 		}
-		code<<"\tintTofloat("<<reg<<");"<<endl;code_line++;
+		code<<"\tintTofloat("<<reg<<");"<<endl;
 		result = reg;
 		isImmediate = false;
 	}
@@ -446,33 +440,56 @@ private:
 	exp_ast *expr;
 };
 
-class arr_ast : public exp_ast {			// TODO
+class arr_ast : public exp_ast {
 public:
-	arr_ast(){}
+	arr_ast() {
+		isIden = true;
+	}
 	arr_ast(arr_ast *e1, exp_ast *e2) {
 		expr1=e1; expr2=e2;
 		setType(*(e1->getType().t));
+		isIden = false;
 	}
 	void print(int n) {
 		cout<<"(ArrayRef "; expr1->print(0); cout<<" "; expr2->print(0); cout<<")";
 	}
-	void generate_address() {
+	void generate_arr_address();
+	void generate_code();
+	bool isIden;
+private:
+	arr_ast *expr1;
+	exp_ast *expr2;
+};
 
+class iden_ast: public arr_ast {
+public:
+	iden_ast(string s,typeExp t) : arr_ast() {
+		c=s;
+		setType(t);
 	}
-	void generate_code() {
+	void print(int n) {
+		cout<<"(Id \""<<c<<"\")";
+	}
+	void generate_address() {
+		int off = get_offset();
+		char offc[10];
+		sprintf(offc,"%d",off);
+		result = offc;
+		isImmediate = true;
+	}
+	void generate_iden() {
 		basicType t = getType().type;
 		string reg = regman.allocate(t);
 		code<<"\tload"<<((t==cint)?"i":"f")
-			<<"(ind(ebp,"<<get_offset()<<"),"<<reg<<");"<<endl;code_line++;
-
+			<<"(ind(ebp,"<<get_offset()<<"),"<<reg<<");"<<endl;
 		result = reg;
 		isImmediate = false;
 	}
 private:
 	int get_offset() {
-		return 0; //l_sym->get_array();
+		return l_sym->get_offset(c);
 	}
-	exp_ast *expr1, *expr2;
+	string c;
 };
 
 class ass_ast : public stmt_ast {			// TODO
@@ -486,9 +503,21 @@ public:
 	void generate_code() {
 		cout<<"ass"<<endl;
 		expr2->generate_code();
+		string reg2 = expr2->result;
+		if(expr1->isIden)
+			((iden_ast*)expr1)->generate_address();
+		else
+			expr1->generate_arr_address();
+		string reg1 = expr1->result;
+		if(!expr1->isImmediate && !expr2->isImmediate) regman.prepare(reg2,reg1);
+		code<<"\tstore"<<((expr2->getType().type==cint)?"i":"f")
+			<<"("<<reg2<<",ind(ebp,"<<reg1<<"));"<<endl;
+		if(!expr1->isImmediate) regman.free(reg1);
+		if(!expr2->isImmediate) regman.free(reg2);
 	}
 private:
-	exp_ast *expr1,*expr2;
+	arr_ast *expr1;
+	exp_ast *expr2;
 };
 
 class op_ast : public exp_ast {
@@ -544,58 +573,47 @@ public:
 	}
 	void generate_code() {
 		cout<<"BinOp "<<oper<<endl;
-
 		if(oper == '=') {
-			expr1->generate_address();
-			string reg1 = expr1->result;
-
 			expr2->generate_code();
 			string reg2 = expr2->result;
-
-			if(!expr1->isImmediate && !expr2->isImmediate) regman.prepare(reg1,reg2);
-
+			if(((arr_ast*)expr1)->isIden)
+				((iden_ast*)expr1)->generate_address();
+			else
+				((arr_ast*)expr1)->generate_arr_address();
+			string reg1 = expr1->result;
+			if(!expr1->isImmediate && !expr2->isImmediate) regman.prepare(reg2,reg1);
 			code<<"\tstore"<<((expr2->getType().type==cint)?"i":"f")
 				<<"("<<reg2<<",ind(ebp,"<<reg1<<"));"<<endl;
-
-			if(!expr2->isImmediate) regman.free(reg2);
-
+			if(!expr1->isImmediate) regman.free(reg1);
 			result = reg2;
 			isImmediate = expr2->isImmediate;
-
 			return;
 		}
-
 		expr1->generate_code();
 		string reg1 = expr1->result;
-
 		expr2->generate_code();
 		string reg2 = expr2->result;
-
 		if(expr2->isImmediate) {
 			reg2 = regman.allocate(expr2->getType().type);
-			code<<"\tmove("<<expr2->result<<","<<reg2<<");"<<endl;code_line++;
+			code<<"\tmove("<<expr2->result<<","<<reg2<<");"<<endl;
 		}
-
 		if(!expr1->isImmediate) regman.prepare(reg1,reg2);
-
 		if(oper == '+') {
 			code<<"\tadd"<<((expr1->getType().type==cint)?"i":"f")
-				<<"("<<reg1<<","<<reg2<<");"<<endl;code_line++;
+				<<"("<<reg1<<","<<reg2<<");"<<endl;
 		} else if(oper == '-') {
 			code<<"\tmul"<<((expr1->getType().type==cint)?"i":"f")
 				<<"(-1,"<<reg2<<");"<<endl
 				<<"\tadd"<<((expr1->getType().type==cint)?"i":"f")
-				<<"("<<reg1<<","<<reg2<<");"<<endl;code_line++;code_line++;
+				<<"("<<reg1<<","<<reg2<<");"<<endl;
 		} else if(oper == '*') {
 			code<<"\tmul"<<((expr1->getType().type==cint)?"i":"f")
-				<<"("<<reg1<<","<<reg2<<");"<<endl;code_line++;
+				<<"("<<reg1<<","<<reg2<<");"<<endl;
 		} else if(oper == '/') {
 			code<<"\tdiv"<<((expr1->getType().type==cint)?"i":"f")
-				<<"("<<reg1<<","<<reg2<<");"<<endl;code_line++;
+				<<"("<<reg1<<","<<reg2<<");"<<endl;
 		}
-
 		if(!expr1->isImmediate) regman.free(reg1);
-
 		result = reg2;
 		isImmediate = false;
 	}
@@ -704,7 +722,9 @@ public:
 			{
 				expr[i]->generate_code();
 				code<<"\tprint_"<<((expr[i]->getType().type==cint)?"int":((expr[i]->getType().type==cfloat)?"float":"string"))
-					<<"("<<expr[i]->result<<");"<<endl;code_line++;
+					<<"("<<expr[i]->result<<");"<<endl;
+				if(!expr[i]->isImmediate)
+					regman.free(expr[i]->result);
 			}
 		}
 	}
@@ -756,7 +776,9 @@ public:
 			{
 				expr[i]->generate_code();
 				code<<"\tprint_"<<((expr[i]->getType().type==cint)?"int":((expr[i]->getType().type==cfloat)?"float":"string"))
-					<<"("<<expr[i]->result<<");"<<endl;code_line++;
+					<<"("<<expr[i]->result<<");"<<endl;
+				if(!expr[i]->isImmediate)
+					regman.free(expr[i]->result);
 			}
 		}
 	}
@@ -819,38 +841,6 @@ private:
 	string c;
 };
 
-class iden_ast: public arr_ast {
-public:
-	iden_ast(string s,typeExp t) : arr_ast() {
-		c=s;
-		setType(t);
-	}
-	void print(int n) {
-		cout<<"(Id \""<<c<<"\")";
-	}
-	void generate_address() {
-		int off = get_offset();
-		char offc[10];
-		sprintf(offc,"%d",off);
-		result = offc;
-		isImmediate = true;
-	}
-	void generate_code() {
-		basicType t = getType().type;
-		string reg = regman.allocate(t);
-		code<<"\tload"<<((t==cint)?"i":"f")
-			<<"(ind(ebp,"<<get_offset()<<"),"<<reg<<");"<<endl;
-
-		result = reg;
-		isImmediate = false;
-	}
-private:
-	int get_offset() {
-		return l_sym->get_offset(c);
-	}
-	string c;
-};
-
 class if_ast : public stmt_ast {
 public:
 	if_ast(exp_ast *e, stmt_ast *s1, stmt_ast *s2) {
@@ -867,14 +857,14 @@ public:
 		if(expr->isImmediate)
 		{
 			reg = regman.allocate(expr->getType().type);
-			code<<"\tmove("<<expr->result<<","<<reg<<");"<<endl;code_line++;
+			code<<"\tmove("<<expr->result<<","<<reg<<");"<<endl;
 		}
-		code<<"\tcmp"<<((expr->getType().type==cint)?"i":"f")<<"(0,"<<reg<<");"<<endl;code_line++;
+		code<<"\tcmp"<<((expr->getType().type==cint)?"i":"f")<<"(0,"<<reg<<");"<<endl;
 		if(!expr->isImmediate)
 			regman.free(reg);
-		code<<"\tje(l"<<++label<<");"<<endl;code_line++;int temp=label;
+		code<<"\tje(l"<<++label<<");"<<endl;int temp=label;
 		then->generate_code();
-		code<<"\tj(l"<<++label<<");"<<endl;code_line++;int temp2=label;
+		code<<"\tj(l"<<++label<<");"<<endl;int temp2=label;
 		code<<"l"<<temp<<":";
 		els->generate_code();
 		code<<"l"<<temp2<<":";
@@ -905,17 +895,17 @@ public:
 		if(expr2->isImmediate)
 		{
 			reg = regman.allocate(expr2->getType().type);
-			code<<"\tmove("<<expr2->result<<","<<reg<<");"<<endl;code_line++;
+			code<<"\tmove("<<expr2->result<<","<<reg<<");"<<endl;
 		}
-		code<<"\tcmp"<<((expr2->getType().type==cint)?"i":"f")<<"(0,"<<reg<<");"<<endl;code_line++;
+		code<<"\tcmp"<<((expr2->getType().type==cint)?"i":"f")<<"(0,"<<reg<<");"<<endl;
 		if(!expr2->isImmediate)
 			regman.free(reg);
-		code<<"\tje(l"<<(m2=++label)<<");"<<endl;code_line++;
+		code<<"\tje(l"<<(m2=++label)<<");"<<endl;
 		body->generate_code();
 		expr3->generate_code();
 		if(!expr2->isImmediate)
 			regman.free(expr2->result);
-		code<<"\tj(l"<<m1<<");"<<endl;code_line++;
+		code<<"\tj(l"<<m1<<");"<<endl;
 		code<<"l"<<m2<<":";
 	}
 private:
@@ -939,14 +929,14 @@ public:
 		if(expr->isImmediate)
 		{
 			reg = regman.allocate(expr->getType().type);
-			code<<"\tmove("<<expr->result<<","<<reg<<");"<<endl;code_line++;
+			code<<"\tmove("<<expr->result<<","<<reg<<");"<<endl;
 		}
-		code<<"\tcmp"<<((expr->getType().type==cint)?"i":"f")<<"(0,"<<reg<<");"<<endl;code_line++;
+		code<<"\tcmp"<<((expr->getType().type==cint)?"i":"f")<<"(0,"<<reg<<");"<<endl;
 		if(!expr->isImmediate)
 			regman.free(reg);
-		code<<"\tje(l"<<(m2=++label)<<");"<<endl;code_line++;
+		code<<"\tje(l"<<(m2=++label)<<");"<<endl;
 		body->generate_code();
-		code<<"\tj(l"<<m1<<");"<<endl;code_line++;
+		code<<"\tj(l"<<m1<<");"<<endl;
 		code<<"l"<<m2<<":";
 	}
 private:
