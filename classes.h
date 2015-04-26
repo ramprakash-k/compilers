@@ -362,7 +362,7 @@ public:
 	}
 	void generate_code() {
 		for(list<stmt_ast *>::iterator i = children.begin(); i != children.end(); i++) {
-			cout<<distance(i,children.begin())<<endl;
+			//cout<<distance(i,children.begin())<<endl;
 			(*i)->generate_code();
 		}
 	}
@@ -385,9 +385,8 @@ public:
 				<<"("<<expr->result<<",ind(ebp,"<<l_sym->return_offset<<"));"<<endl;
 		code<<"\tloadi(ind(ebp), ebp);"<<endl
 			<<"\taddi ("<<-(l_sym->local_size())<<",esp);"<<endl;
-		if(expr->getType().type!=cvoid)
-			code<<"\tpopi(1);"<<endl;
-		code<<"\treturn;"<<endl;
+		code<<"\tpopi(1);"<<endl
+			<<"\treturn;"<<endl;
 		if(!expr->isImmediate) regman.free(expr->result);
 	}
 private:
@@ -503,15 +502,17 @@ public:
 		cout<<"(ASS";cout<<((expr1->getType().type==cint)?"_INT ":"_FLOAT "); expr1->print(0); cout<<" "; expr2->print(0); cout<<")";
 	}
 	void generate_code() {
-		cout<<"ass"<<endl;
+		//cout<<"ass"<<endl;
 		expr2->generate_code();
 		string reg2 = expr2->result;
+		int orrr;
+		if(!expr2->isImmediate) orrr = regman.getf(reg2);
 		if(expr1->isIden)
 			((iden_ast*)expr1)->generate_address();
 		else
 			expr1->generate_arr_address();
 		string reg1 = expr1->result;
-		if(!expr1->isImmediate && !expr2->isImmediate) regman.prepare(reg2,reg1);
+		if(!expr1->isImmediate && !expr2->isImmediate) regman.prepare(reg2,reg1,orrr);
 		code<<"\tstore"<<((expr2->getType().type==cint)?"i":"f")
 			<<"("<<reg2<<",ind(ebp,"<<reg1<<"));"<<endl;
 		if(!expr1->isImmediate) regman.free(reg1);
@@ -574,16 +575,20 @@ public:
 		cout<<((expr1->getType().type==cint)?"_INT ":"_FLOAT "); expr1->print(0); cout<<" "; expr2->print(0); cout<<")";
 	}
 	void generate_code() {
-		cout<<"BinOp "<<(char)oper<<endl;
+		//if(oper<1000)
+			//cout<<"BinOp "<<(char)oper<<endl;
+		//else cout<<"BinOp "<<oper<<endl;
 		if(oper == '=') {
 			expr2->generate_code();
 			string reg2 = expr2->result;
+			int orrr;
+			if(!expr2->isImmediate)orrr=regman.getf(reg2);
 			if(((arr_ast*)expr1)->isIden)
 				((iden_ast*)expr1)->generate_address();
 			else
 				((arr_ast*)expr1)->generate_arr_address();
 			string reg1 = expr1->result;
-			if(!expr1->isImmediate && !expr2->isImmediate) regman.prepare(reg2,reg1);
+			if(!expr1->isImmediate && !expr2->isImmediate) regman.prepare(reg2,reg1,orrr);
 			code<<"\tstore"<<((expr2->getType().type==cint)?"i":"f")
 				<<"("<<reg2<<",ind(ebp,"<<reg1<<"));"<<endl;
 			if(!expr1->isImmediate) regman.free(reg1);
@@ -600,6 +605,7 @@ public:
 			code<<"\tcmp"<<((expr1->getType().type==cint)?"i":"f")
 				<<"(0,"<<reg1<<");"<<endl;
 			int m1,m2;
+			regman.free(reg1);
 			code<<"\tjne(l"<<(m1=++label)<<");"<<endl;
 			expr2->generate_code();
 			string reg2 = expr2->result;
@@ -609,10 +615,9 @@ public:
 			}
 			code<<"\tcmp"<<((expr2->getType().type==cint)?"i":"f")
 				<<"(0,"<<reg2<<");"<<endl;
+			regman.free(reg2);
+			reg2 = regman.allocate(cint);
 			code<<"\tjne(l"<<m1<<");"<<endl;
-			regman.free(reg1);
-			if(expr2->getType().type==cfloat)
-				code<<"\tfloatToint("<<reg2<<");"<<endl;
 			code<<"\tmove(0,"<<reg2<<");"<<endl;
 			code<<"\tj(l"<<(m2=++label)<<");"<<endl;
 			code<<"l"<<m1<<":\tmove(1,"<<reg2<<");"<<endl;
@@ -630,6 +635,7 @@ public:
 			code<<"\tcmp"<<((expr1->getType().type==cint)?"i":"f")
 				<<"(0,"<<reg1<<");"<<endl;
 			int m1,m2;
+			regman.free(reg1);
 			code<<"\tje(l"<<(m1=++label)<<");"<<endl;
 			expr2->generate_code();
 			string reg2 = expr2->result;
@@ -639,10 +645,9 @@ public:
 			}
 			code<<"\tcmp"<<((expr2->getType().type==cint)?"i":"f")
 				<<"(0,"<<reg2<<");"<<endl;
+			regman.free(reg2);
+			reg2 = regman.allocate(cint);
 			code<<"\tje(l"<<m1<<");"<<endl;
-			regman.free(reg1);
-			if(expr2->getType().type==cfloat)
-				code<<"\tfloatToint("<<reg2<<");"<<endl;
 			code<<"\tmove(1,"<<reg2<<");"<<endl;
 			code<<"\tj(l"<<(m2=++label)<<");"<<endl;
 			code<<"l"<<m1<<":\tmove(0,"<<reg2<<");"<<endl;
@@ -653,13 +658,15 @@ public:
 		}
 		expr1->generate_code();
 		string reg1 = expr1->result;
+		int orrr;
+		if(!expr1->isImmediate) orrr=regman.getf(reg1);
 		expr2->generate_code();
 		string reg2 = expr2->result;
 		if(expr2->isImmediate) {
 			reg2 = regman.allocate(expr2->getType().type);
 			code<<"\tmove("<<expr2->result<<","<<reg2<<");"<<endl;
 		}
-		if(!expr1->isImmediate) regman.prepare(reg1,reg2);
+		if(!expr1->isImmediate) regman.prepare(reg1,reg2,orrr);
 		if(oper == '+') {
 			code<<"\tadd"<<((expr1->getType().type==cint)?"i":"f")
 				<<"("<<reg1<<","<<reg2<<");"<<endl;
@@ -677,8 +684,8 @@ public:
 		} else if(oper == 1003) {
 			code<<"\tcmp"<<((expr1->getType().type==cint)?"i":"f")
 				<<"("<<reg1<<","<<reg2<<");"<<endl;
-			if(expr1->getType().type==cfloat)
-				code<<"\tfloatToint("<<reg2<<");"<<endl;
+			regman.free(reg2);
+			reg2 = regman.allocate(cint);
 			int m1,m2;
 			code<<"\tje(l"<<(m1=++label)<<");"<<endl;
 			code<<"\tmove(0,"<<reg2<<");"<<endl;
@@ -688,8 +695,8 @@ public:
 		} else if(oper == 1004) {
 			code<<"\tcmp"<<((expr1->getType().type==cint)?"i":"f")
 				<<"("<<reg1<<","<<reg2<<");"<<endl;
-			if(expr1->getType().type==cfloat)
-				code<<"\tfloatToint("<<reg2<<");"<<endl;
+			regman.free(reg2);
+			reg2 = regman.allocate(cint);
 			int m1,m2;
 			code<<"\tjne(l"<<(m1=++label)<<");"<<endl;
 			code<<"\tmove(0,"<<reg2<<");"<<endl;
@@ -699,8 +706,8 @@ public:
 		} else if(oper == '<') {
 			code<<"\tcmp"<<((expr1->getType().type==cint)?"i":"f")
 				<<"("<<reg1<<","<<reg2<<");"<<endl;
-			if(expr1->getType().type==cfloat)
-				code<<"\tfloatToint("<<reg2<<");"<<endl;
+			regman.free(reg2);
+			reg2 = regman.allocate(cint);
 			int m1,m2;
 			code<<"\tjl(l"<<(m1=++label)<<");"<<endl;
 			code<<"\tmove(0,"<<reg2<<");"<<endl;
@@ -710,8 +717,8 @@ public:
 		} else if(oper == '>') {
 			code<<"\tcmp"<<((expr1->getType().type==cint)?"i":"f")
 				<<"("<<reg1<<","<<reg2<<");"<<endl;
-			if(expr1->getType().type==cfloat)
-				code<<"\tfloatToint("<<reg2<<");"<<endl;
+			regman.free(reg2);
+			reg2 = regman.allocate(cint);
 			int m1,m2;
 			code<<"\tjg(l"<<(m1=++label)<<");"<<endl;
 			code<<"\tmove(0,"<<reg2<<");"<<endl;
@@ -721,8 +728,8 @@ public:
 		} else if(oper == 1005) {
 			code<<"\tcmp"<<((expr1->getType().type==cint)?"i":"f")
 				<<"("<<reg1<<","<<reg2<<");"<<endl;
-			if(expr1->getType().type==cfloat)
-				code<<"\tfloatToint("<<reg2<<");"<<endl;
+			regman.free(reg2);
+			reg2 = regman.allocate(cint);
 			int m1,m2;
 			code<<"\tjle(l"<<(m1=++label)<<");"<<endl;
 			code<<"\tmove(0,"<<reg2<<");"<<endl;
@@ -732,8 +739,8 @@ public:
 		} else if(oper == 1006) {
 			code<<"\tcmp"<<((expr1->getType().type==cint)?"i":"f")
 				<<"("<<reg1<<","<<reg2<<");"<<endl;
-			if(expr1->getType().type==cfloat)
-				code<<"\tfloatToint("<<reg2<<");"<<endl;
+			regman.free(reg2);
+			reg2 = regman.allocate(cint);
 			int m1,m2;
 			code<<"\tjge(l"<<(m1=++label)<<");"<<endl;
 			code<<"\tmove(0,"<<reg2<<");"<<endl;
@@ -818,8 +825,8 @@ public:
 		}
 		code<<"\tcmp"<<((expr->getType().type==cint)?"i":"f")
 			<<"(0,"<<reg<<");"<<endl;
-		if(expr->getType().type==cfloat)
-			code<<"\tfloatToint("<<reg<<");"<<endl;
+		//if(expr->getType().type==cfloat)
+			//code<<"\tfloatToint("<<reg<<");"<<endl;
 		int m1,m2;
 		code<<"\tje(l"<<(m1=++label)<<");"<<endl;
 		code<<"\tmove(0,"<<reg<<");"<<endl;
@@ -964,7 +971,7 @@ public:
 		cout<<"(IntConst "<<c<<")";
 	}
 	void generate_code() {
-		cout<<"Int "<<c<<endl;
+		//cout<<"Int "<<c<<endl;
 		result = c;
 		isImmediate = true;
 	}
@@ -982,7 +989,7 @@ public:
 		cout<<"(StringConst "<<c<<")";
 	}
 	void generate_code() {
-		cout<<"String "<<c<<endl;
+		//cout<<"String "<<c<<endl;
 		result = c;
 		isImmediate = true;
 	}
@@ -1000,7 +1007,7 @@ public:
 		cout<<"(FloatConst "<<c<<")";
 	}
 	void generate_code() {
-		cout<<"Float "<<c<<endl;
+		//cout<<"Float "<<c<<endl;
 		result = c;
 		isImmediate = true;
 	}

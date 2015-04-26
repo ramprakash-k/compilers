@@ -18,6 +18,7 @@ public:
 			used.pop_front();
 			moveToStack(x);
 			fcount[x]++;
+			//cout<<"fcount "<<numtoreg(x)<<" : "<<fcount[x]<<endl;
 			regs.push_back(x);
 		}
 		int r = regs.front();
@@ -35,43 +36,49 @@ public:
 		types[r].pop_back();
 		//cout<<"FreeEnd"<<endl;
 	}
-	void prepare(string &reg, string rr) {
+	void prepare(string &reg, string rr,int orig) {
 		int left = regtonum(reg);
 		int right = regtonum(rr);
 		if(left == right) {
 			//cout<<"Same"<<endl;
-			string newreg = allocate(types[left].back());
+			string newreg = allocate(*(types[left].end()-2));
 			if(newreg == rr) {
-				//cout<<"O_o"<<endl;
-				free(newreg);
-				newreg = allocate(types[left].back());
+				cout<<"O_o"<<endl;
+				exit(1);
+				//free(newreg);
+				//newreg = allocate(*(types[left].end()-2));
 			}
 			int nr = regtonum(newreg);
 			vector<basicType> &vtypes = types[left];
-			code<<"\tload"<<(vtypes[vtypes.size()-1]==cfloat?"f":"i")
+			code<<"\tload"<<(vtypes[vtypes.size()-2]==cfloat?"f":"i")
 				<<"(ind(esp),"<<newreg<<");"<<endl;
-			code<<"\tpop"<<(vtypes[vtypes.size()-1]==cfloat?"f":"i")
+			code<<"\tpop"<<(vtypes[vtypes.size()-2]==cfloat?"f":"i")
 				<<"(1);"<<endl;
 			fcount[left]--;
+			//cout<<"fcount "<<fcount[left]<<endl;
 			vtypes.erase(vtypes.begin() + vtypes.size()-2);
 			reg = newreg;
 			return;
 		}
-		if(fcount[left] == fcount[right]) {
+		if(fcount[left] == orig) {
 			//cout<<"Equal"<<endl;
 			return;
-		} else if(fcount[right]+1 == fcount[left]) {
+		} else if(orig+1 == fcount[left]) {
 			//cout<<"Get"<<endl;
 			getFromStack(left);
 			fcount[left]--;
+			//cout<<"fcount "<<fcount[left]<<endl;
 			regs.remove(left);
 			used.push_back(left);
-		} else if(fcount[right] != fcount[left]+1) {
+		} else if(orig != fcount[left]+1) {
 			cerr<<"Error: Register Manager "<<reg<<" "<<fcount[left]<<" "<<fcount[right]<<endl;
 		}
 	}
 	int reg_in_use() {
 		return used.size();
+	}
+	int getf(string reg) {
+		return fcount[regtonum(reg)];
 	}
 	RegMan() {
 		for (int i = 0; i < NUMREG; ++i) {
@@ -80,21 +87,21 @@ public:
 		}
 	}
 	~RegMan() {
-		for (int i = 0; i < NUMREG; ++i)
-		{
-			cout<<fcount[i]<<" "<<types[i].size()<<" ";
-		}
-		cout<<endl;
+		//for (int i = 0; i < NUMREG; ++i)
+		//{
+			//cout<<fcount[i]<<" "<<types[i].size()<<" ";
+		//}
+		//cout<<endl;
 		while(!regs.empty()) {
-			cout<<regs.front()<<" ";
+			//cout<<regs.front()<<" ";
 			regs.pop_front();
 		}
-		cout<<endl;
+		//cout<<endl;
 		while(!used.empty()) {
-			cout<<used.front()<<" ";
+			//cout<<used.front()<<" ";
 			used.pop_front();
 		}
-		cout<<endl;
+		//cout<<endl;
 	}
 private:
 	list<int> regs;
