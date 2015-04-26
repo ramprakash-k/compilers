@@ -130,6 +130,10 @@ declarator_list
 declarator
 	: IDENTIFIER
 	{
+		if(g_sym.present($1).first)
+		{
+			std::cerr<<"Error : Variable name "<<$1<<" in line number "<<Parser::line_no<<" is already the name of a function."<<std::endl;
+		}
 		$$ = $1;
 	}
 	| declarator '[' constant_expression ']'
@@ -205,19 +209,15 @@ statement
 			std::cerr<<"Error : Retrning an array variable in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
 		}
-
 		exp_ast *e = $2;
-
 		if(cur_return == cint && ($2)->getType().type == cfloat)
 		{
 			e = new cast_int_ast($2);
 		}
-
 		else if(cur_return == cfloat && ($2)->getType().type == cint)
 		{
 			e = new cast_float_ast($2);
 		}
-
 		if(cur_return!=e->getType().type)
 		{
 			std::cerr<<"Error : Return type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
@@ -248,26 +248,22 @@ statement
 				std::cerr<<"Error : Incorrect number of arguments to function "<<$1<<" in line number "<<Parser::line_no<<std::endl;
 				exit(0);
 			}
-
 			for (int i = 0; i < call.size(); ++i)
 			{
 				if(call[i].type == cint && def[i].type == cfloat)
 				{
 					temp->cast(cfloat, i);
 				}
-
 				else if(call[i].type == cfloat && def[i].type == cint)
 				{
 					temp->cast(cint, i);
 				}
-
 				else if(!(call[i]==def[i]))
 				{
 					std::cerr<<"Error : Argument type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
 					exit(0);
 				}
 			}
-
 			$$=temp;
 		}
 	}
@@ -290,19 +286,15 @@ assignment_statement
 			std::cerr<<"Error : Assigning an array variable in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
 		}
-
 		exp_ast *e = $3;
-
 		if(($1)->getType().type == cint && ($3)->getType().type == cfloat)
 		{
 			e = new cast_int_ast($3);
 		}
-
 		else if(($1)->getType().type == cfloat && ($3)->getType().type == cint)
 		{
 			e = new cast_float_ast($3);
 		}
-
 		else if(!($1->getType()==e->getType()))
 		{
 			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
@@ -496,7 +488,6 @@ relational_expression
 			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
 		}
-
 		$$=new op_ast(e1,e2,'>');
 	}
 	| relational_expression LE_OP additive_expression
@@ -539,19 +530,15 @@ relational_expression
 			std::cerr<<"Error : Using operation on an array variable in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
 		}
-
 		exp_ast *e1 = $1, *e2 = $3;
-
 		if(($1)->getType().type == cint && ($3)->getType().type == cfloat)
 		{
 			e1 = new cast_float_ast($1);
 		}
-
 		else if(($1)->getType().type == cfloat && ($3)->getType().type == cint)
 		{
 			e2 = new cast_float_ast($3);
 		}
-
 		if(!(e1->getType()==e2->getType()))
 		{
 			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
@@ -578,19 +565,15 @@ additive_expression
 			std::cerr<<"Error : Using operation on an array variable in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
 		}
-
 		exp_ast *e1 = $1, *e2 = $3;
-
 		if(($1)->getType().type == cint && ($3)->getType().type == cfloat)
 		{
 			e1 = new cast_float_ast($1);
 		}
-
 		else if(($1)->getType().type == cfloat && ($3)->getType().type == cint)
 		{
 			e2 = new cast_float_ast($3);
 		}
-
 		if(!(e1->getType()==e2->getType()))
 		{
 			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
@@ -610,19 +593,15 @@ additive_expression
 			std::cerr<<"Error : Using operation on an array variable in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
 		}
-
 		exp_ast *e1 = $1, *e2 = $3;
-
 		if(($1)->getType().type == cint && ($3)->getType().type == cfloat)
 		{
 			e1 = new cast_float_ast($1);
 		}
-
 		else if(($1)->getType().type == cfloat && ($3)->getType().type == cint)
 		{
 			e2 = new cast_float_ast($3);
 		}
-
 		if(!(e1->getType()==e2->getType()))
 		{
 			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
@@ -649,19 +628,15 @@ multiplicative_expression
 			std::cerr<<"Error : Using operation on an array variable in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
 		}
-
 		exp_ast *e1 = $1, *e2 = $3;
-
 		if(($1)->getType().type == cint && ($3)->getType().type == cfloat)
 		{
 			e1 = new cast_float_ast($1);
 		}
-
 		else if(($1)->getType().type == cfloat && ($3)->getType().type == cint)
 		{
 			e2 = new cast_float_ast($3);
 		}
-
 		if(!(e1->getType()==e2->getType()))
 		{
 			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
@@ -681,19 +656,15 @@ multiplicative_expression
 			std::cerr<<"Error : Using operation on an array variable in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
 		}
-
 		exp_ast *e1 = $1, *e2 = $3;
-
 		if(($1)->getType().type == cint && ($3)->getType().type == cfloat)
 		{
 			e1 = new cast_float_ast($1);
 		}
-
 		else if(($1)->getType().type == cfloat && ($3)->getType().type == cint)
 		{
 			e2 = new cast_float_ast($3);
 		}
-
 		if(!(e1->getType()==e2->getType()))
 		{
 			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
@@ -780,19 +751,16 @@ postfix_expression
 				{
 					temp->cast(cfloat, i);
 				}
-
 				else if(call[i].type == cfloat && def[i].type == cint)
 				{
 					temp->cast(cint, i);
 				}
-
 				else if(!(call[i]==def[i]))
 				{
 					std::cerr<<"Error : Argument "<<i+1<<" to function "<<$1<<" in line number "<<Parser::line_no<<" does not match."<<std::endl;
 					exit(0);
 				}
 			}
-
 			$$=temp;
 		}
 	}
@@ -824,25 +792,20 @@ primary_expression
 			std::cerr<<"Error : Using operation on an array variable in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
 		}
-
 		exp_ast *e1 = $1, *e2 = $3;
-
 		if(($1)->getType().type == cint && ($3)->getType().type == cfloat)
 		{
 			e2 = new cast_int_ast($3);
 		}
-
 		else if(($1)->getType().type == cfloat && ($3)->getType().type == cint)
 		{
 			e2 = new cast_float_ast($3);
 		}
-
 		if(!(e1->getType()==e2->getType()))
 		{
 			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
 		}
-
 		$$=new op_ast(e1,e2,'=');
 	}
 	| INT_CONST

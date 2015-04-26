@@ -19,8 +19,6 @@ extern int label;
 #include "reg_man.h"
 
 extern RegMan regman;
-class global_sym;
-extern global_sym g_sym;
 
 static string btToString(basicType t) {
 	switch(t) {
@@ -157,8 +155,7 @@ public:
 			l_entry *l = new l_entry(type,*it);
 			offset -= l->get_size();
 			l->set_off(offset);
-			if(g_sym.present(l->get_name()).first){ flag = false; s = l->get_name(); }
-			else if(local.find(l->get_name()) != local.end()){ flag = false; s = l->get_name(); }
+			if(local.find(l->get_name()) != local.end()){ flag = false; s = l->get_name(); }
 			else local[l->get_name()] = l;
 		}
 		delete(n);
@@ -383,12 +380,14 @@ public:
 	}
 	void generate_code() {
 		expr->generate_code();
-		code<<"\tstore"<<(l_sym->ret_type==cfloat?"f":"i")
-			<<"("<<expr->result<<",ind(ebp,"<<l_sym->return_offset<<"));"<<endl;
+		if(expr->getType().type!=cvoid)
+			code<<"\tstore"<<(l_sym->ret_type==cfloat?"f":"i")
+				<<"("<<expr->result<<",ind(ebp,"<<l_sym->return_offset<<"));"<<endl;
 		code<<"\tloadi(ind(ebp), ebp);"<<endl
-			<<"\taddi ("<<-(l_sym->local_size())<<",esp);"<<endl
-			<<"\tpopi(1);"<<endl
-			<<"\treturn;"<<endl;
+			<<"\taddi ("<<-(l_sym->local_size())<<",esp);"<<endl;
+		if(expr->getType().type!=cvoid)
+			code<<"\tpopi(1);"<<endl;
+		code<<"\treturn;"<<endl;
 		if(!expr->isImmediate) regman.free(expr->result);
 	}
 private:
@@ -618,6 +617,8 @@ public:
 			code<<"\tj(l"<<(m2=++label)<<");"<<endl;
 			code<<"l"<<m1<<":\tmove(1,"<<reg2<<");"<<endl;
 			code<<"l"<<m2<<":";
+			result = reg2;
+			isImmediate = false;
 			return;
 		} else if(oper == 1002) {
 			expr1->generate_code();
@@ -646,6 +647,8 @@ public:
 			code<<"\tj(l"<<(m2=++label)<<");"<<endl;
 			code<<"l"<<m1<<":\tmove(0,"<<reg2<<");"<<endl;
 			code<<"l"<<m2<<":";
+			result = reg2;
+			isImmediate = false;
 			return;
 		}
 		expr1->generate_code();
@@ -696,6 +699,7 @@ public:
 		} else if(oper == '<') {
 			code<<"\tcmp"<<((expr1->getType().type==cint)?"i":"f")
 				<<"("<<reg1<<","<<reg2<<");"<<endl;
+			cout<<"HEEHHHEEEHHEE : "<<reg1<<endl;
 			if(expr1->getType().type==cfloat)
 				code<<"\tfloatToint("<<reg2<<");"<<endl;
 			int m1,m2;
@@ -771,21 +775,60 @@ public:
 		cout<<((expr->getType().type==cint)?"_INT ":"_FLOAT "); expr->print(0); cout<<")";
 	}
 	void generate_code() {
+		if(oper == 1000) {
+			if(((arr_ast*)expr)->isIden)
+				((iden_ast*)expr)->generate_address();
+			else
+				((arr_ast*)expr)->generate_arr_address();
+			string reg = regman.allocate(expr->getType().type);
+			string reg1 = regman.allocate(expr->getType().type);
+			code<<"\tload"<<((expr->getType().type==cint)?"i":"f")
+				<<"(ind(ebp,"<<expr->result<<"),"<<reg<<");"<<endl;
+			code<<"\tmove(1,"<<reg1<<");"<<endl;
+			code<<"\tadd"<<((expr->getType().type==cint)?"i":"f")
+				<<"("<<reg<<","<<reg1<<");"<<endl;
+			code<<"\tstore"<<((expr->getType().type==cint)?"i":"f")
+				<<"("<<reg1<<",ind(ebp,"<<expr->result<<"));"<<endl;
+			regman.free(reg1);
+			result = reg;
+			isImmediate = false;
+			return;
+		}
 		expr->generate_code();
 		string reg = expr->result;
-
+		if(oper == '-') {
+			if(expr->isImmediate)
+			{
+				if(reg[0]=='-')reg=reg.substr(1);
+				else reg=(string)("-")+reg;
+				result = reg;
+				isImmediate = true;
+			}
+			else
+			{
+				code<<"\tmul"<<((expr->getType().type==cint)?"i":"f")
+					<<"(-1,"<<reg<<");"<<endl;
+				result = reg;
+				isImmediate = false;
+			}
+			return;
+		}
 		if(expr->isImmediate) {
 			reg = regman.allocate(expr->getType().type);
-			code<<"l"<<++label<<": "
-				<<"move("<<reg<<","<<reg<<");"<<endl;
+			code<<"\tmove("<<expr->result<<","<<reg<<");"<<endl;
 		}
-		// if(oper == '-') {
-		// 	code<<"l"<<++label<<": "
-		// 		<<"mul"<<((expr->getType().type==cint)?"i":"f")
-		// 		<<"(-1,"<<reg<<");"<<endl;
-		// } else if(oper == '!') {
-
-		// }
+		code<<"\tcmp"<<((expr->getType().type==cint)?"i":"f")
+			<<"(0,"<<reg<<");"<<endl;
+		if(expr->getType().type==cfloat)
+			code<<"\tfloatToint("<<reg<<");"<<endl;
+		int m1,m2;
+		code<<"\tje(l"<<(m1=++label)<<");"<<endl;
+		code<<"\tmove(0,"<<reg<<");"<<endl;
+		code<<"\tj(l"<<(m2=++label)<<");"<<endl;
+		code<<"l"<<m1<<":\tmove(1,"<<reg<<");"<<endl;
+		code<<"l"<<m2<<":";
+		result = reg;
+		isImmediate = false;
 	}
 private:
 	exp_ast *expr; int oper;
