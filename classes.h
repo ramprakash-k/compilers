@@ -19,6 +19,8 @@ extern int label;
 #include "reg_man.h"
 
 extern RegMan regman;
+class global_sym;
+extern global_sym g_sym;
 
 static string btToString(basicType t) {
 	switch(t) {
@@ -90,7 +92,7 @@ static bool operator==(typeExp t1,typeExp t2) {
 	basicType a=t1.type;
 	basicType b=t2.type;
 	if(a==cvoid||a==cstring||b==cvoid||b==cstring)return false;
-	if(t1.t==NULL&&t2.t==NULL&&t1.type==t2.type)return true;
+	if(t1.t==NULL&&t2.t==NULL&&a==b)return true;
 	if(t1.t==NULL||t2.t==NULL)return false;
 	return (*(t1.t)==*(t2.t));
 }
@@ -155,7 +157,8 @@ public:
 			l_entry *l = new l_entry(type,*it);
 			offset -= l->get_size();
 			l->set_off(offset);
-			if(local.find(l->get_name()) != local.end()){ flag = false; s = l->get_name(); }
+			if(g_sym.present(l->get_name()).first){ flag = false; s = l->get_name(); }
+			else if(local.find(l->get_name()) != local.end()){ flag = false; s = l->get_name(); }
 			else local[l->get_name()] = l;
 		}
 		delete(n);
@@ -370,7 +373,7 @@ private:
 	list<stmt_ast *> children;
 };
 
-class return_ast : public stmt_ast {		// TODO
+class return_ast : public stmt_ast {
 public:
 	return_ast(exp_ast *e) {
 		expr = e;
@@ -492,7 +495,7 @@ private:
 	string c;
 };
 
-class ass_ast : public stmt_ast {			// TODO
+class ass_ast : public stmt_ast {
 public:
 	ass_ast(arr_ast *e1, exp_ast *e2) {
 		expr1 = e1; expr2 = e2;
@@ -588,6 +591,62 @@ public:
 			result = reg2;
 			isImmediate = expr2->isImmediate;
 			return;
+		} else if(oper == 1001) {
+			expr1->generate_code();
+			string reg1 = expr1->result;
+			if(expr1->isImmediate) {
+				reg1 = regman.allocate(expr1->getType().type);
+				code<<"\tmove("<<expr1->result<<","<<reg1<<");"<<endl;
+			}
+			code<<"\tcmp"<<((expr1->getType().type==cint)?"i":"f")
+				<<"(0,"<<reg1<<");"<<endl;
+			int m1,m2;
+			code<<"\tjne(l"<<(m1=++label)<<");"<<endl;
+			expr2->generate_code();
+			string reg2 = expr2->result;
+			if(expr2->isImmediate) {
+				reg2 = regman.allocate(expr2->getType().type);
+				code<<"\tmove("<<expr2->result<<","<<reg2<<");"<<endl;
+			}
+			code<<"\tcmp"<<((expr2->getType().type==cint)?"i":"f")
+				<<"(0,"<<reg2<<");"<<endl;
+			code<<"\tjne(l"<<m1<<");"<<endl;
+			regman.free(reg1);
+			if(expr2->getType().type==cfloat)
+				code<<"\tfloatToint("<<reg2<<");"<<endl;
+			code<<"\tmove(0,"<<reg2<<");"<<endl;
+			code<<"\tj(l"<<(m2=++label)<<");"<<endl;
+			code<<"l"<<m1<<":\tmove(1,"<<reg2<<");"<<endl;
+			code<<"l"<<m2<<":";
+			return;
+		} else if(oper == 1002) {
+			expr1->generate_code();
+			string reg1 = expr1->result;
+			if(expr1->isImmediate) {
+				reg1 = regman.allocate(expr1->getType().type);
+				code<<"\tmove("<<expr1->result<<","<<reg1<<");"<<endl;
+			}
+			code<<"\tcmp"<<((expr1->getType().type==cint)?"i":"f")
+				<<"(0,"<<reg1<<");"<<endl;
+			int m1,m2;
+			code<<"\tje(l"<<(m1=++label)<<");"<<endl;
+			expr2->generate_code();
+			string reg2 = expr2->result;
+			if(expr2->isImmediate) {
+				reg2 = regman.allocate(expr2->getType().type);
+				code<<"\tmove("<<expr2->result<<","<<reg2<<");"<<endl;
+			}
+			code<<"\tcmp"<<((expr2->getType().type==cint)?"i":"f")
+				<<"(0,"<<reg2<<");"<<endl;
+			code<<"\tje(l"<<m1<<");"<<endl;
+			regman.free(reg1);
+			if(expr2->getType().type==cfloat)
+				code<<"\tfloatToint("<<reg2<<");"<<endl;
+			code<<"\tmove(1,"<<reg2<<");"<<endl;
+			code<<"\tj(l"<<(m2=++label)<<");"<<endl;
+			code<<"l"<<m1<<":\tmove(0,"<<reg2<<");"<<endl;
+			code<<"l"<<m2<<":";
+			return;
 		}
 		expr1->generate_code();
 		string reg1 = expr1->result;
@@ -612,6 +671,72 @@ public:
 		} else if(oper == '/') {
 			code<<"\tdiv"<<((expr1->getType().type==cint)?"i":"f")
 				<<"("<<reg1<<","<<reg2<<");"<<endl;
+		} else if(oper == 1003) {
+			code<<"\tcmp"<<((expr1->getType().type==cint)?"i":"f")
+				<<"("<<reg1<<","<<reg2<<");"<<endl;
+			if(expr1->getType().type==cfloat)
+				code<<"\tfloatToint("<<reg2<<");"<<endl;
+			int m1,m2;
+			code<<"\tje(l"<<(m1=++label)<<");"<<endl;
+			code<<"\tmove(0,"<<reg2<<");"<<endl;
+			code<<"\tj(l"<<(m2=++label)<<");"<<endl;
+			code<<"l"<<m1<<":\tmove(1,"<<reg2<<");"<<endl;
+			code<<"l"<<m2<<":";
+		} else if(oper == 1004) {
+			code<<"\tcmp"<<((expr1->getType().type==cint)?"i":"f")
+				<<"("<<reg1<<","<<reg2<<");"<<endl;
+			if(expr1->getType().type==cfloat)
+				code<<"\tfloatToint("<<reg2<<");"<<endl;
+			int m1,m2;
+			code<<"\tjne(l"<<(m1=++label)<<");"<<endl;
+			code<<"\tmove(0,"<<reg2<<");"<<endl;
+			code<<"\tj(l"<<(m2=++label)<<");"<<endl;
+			code<<"l"<<m1<<":\tmove(1,"<<reg2<<");"<<endl;
+			code<<"l"<<m2<<":";
+		} else if(oper == '<') {
+			code<<"\tcmp"<<((expr1->getType().type==cint)?"i":"f")
+				<<"("<<reg1<<","<<reg2<<");"<<endl;
+			if(expr1->getType().type==cfloat)
+				code<<"\tfloatToint("<<reg2<<");"<<endl;
+			int m1,m2;
+			code<<"\tjl(l"<<(m1=++label)<<");"<<endl;
+			code<<"\tmove(0,"<<reg2<<");"<<endl;
+			code<<"\tj(l"<<(m2=++label)<<");"<<endl;
+			code<<"l"<<m1<<":\tmove(1,"<<reg2<<");"<<endl;
+			code<<"l"<<m2<<":";
+		} else if(oper == '>') {
+			code<<"\tcmp"<<((expr1->getType().type==cint)?"i":"f")
+				<<"("<<reg1<<","<<reg2<<");"<<endl;
+			if(expr1->getType().type==cfloat)
+				code<<"\tfloatToint("<<reg2<<");"<<endl;
+			int m1,m2;
+			code<<"\tjg(l"<<(m1=++label)<<");"<<endl;
+			code<<"\tmove(0,"<<reg2<<");"<<endl;
+			code<<"\tj(l"<<(m2=++label)<<");"<<endl;
+			code<<"l"<<m1<<":\tmove(1,"<<reg2<<");"<<endl;
+			code<<"l"<<m2<<":";
+		} else if(oper == 1005) {
+			code<<"\tcmp"<<((expr1->getType().type==cint)?"i":"f")
+				<<"("<<reg1<<","<<reg2<<");"<<endl;
+			if(expr1->getType().type==cfloat)
+				code<<"\tfloatToint("<<reg2<<");"<<endl;
+			int m1,m2;
+			code<<"\tjle(l"<<(m1=++label)<<");"<<endl;
+			code<<"\tmove(0,"<<reg2<<");"<<endl;
+			code<<"\tj(l"<<(m2=++label)<<");"<<endl;
+			code<<"l"<<m1<<":\tmove(1,"<<reg2<<");"<<endl;
+			code<<"l"<<m2<<":";
+		} else if(oper == 1006) {
+			code<<"\tcmp"<<((expr1->getType().type==cint)?"i":"f")
+				<<"("<<reg1<<","<<reg2<<");"<<endl;
+			if(expr1->getType().type==cfloat)
+				code<<"\tfloatToint("<<reg2<<");"<<endl;
+			int m1,m2;
+			code<<"\tjge(l"<<(m1=++label)<<");"<<endl;
+			code<<"\tmove(0,"<<reg2<<");"<<endl;
+			code<<"\tj(l"<<(m2=++label)<<");"<<endl;
+			code<<"l"<<m1<<":\tmove(1,"<<reg2<<");"<<endl;
+			code<<"l"<<m2<<":";
 		}
 		if(!expr1->isImmediate) regman.free(reg1);
 		result = reg2;

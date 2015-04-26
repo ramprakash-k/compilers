@@ -355,6 +355,11 @@ logical_and_expression
 			std::cerr<<"Error : Using operation on an array variable in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
 		}
+		if($3->getType().t!=NULL)
+		{
+			std::cerr<<"Error : Using operation on an array variable in line number "<<Parser::line_no<<"."<<std::endl;
+			exit(0);
+		}
 		if($1->getType().type!=cint&&$1->getType().type!=cfloat)
 		{
 			std::cerr<<"Error : Invalid type on lhs of relational expression in line number "<<Parser::line_no<<"."<<std::endl;
@@ -386,17 +391,21 @@ equality_expression
 			std::cerr<<"Error : Using operation on an array variable in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
 		}
-		if($1->getType().type!=cint&&$1->getType().type!=cfloat)
+		exp_ast *e1 = $1, *e2 = $3;
+		if(($1)->getType().type == cint && ($3)->getType().type == cfloat)
 		{
-			std::cerr<<"Error : Invalid type on lhs of relational expression in line number "<<Parser::line_no<<"."<<std::endl;
+			e1 = new cast_float_ast($1);
+		}
+		else if(($1)->getType().type == cfloat && ($3)->getType().type == cint)
+		{
+			e2 = new cast_float_ast($3);
+		}
+		if(!(e1->getType()==e2->getType()))
+		{
+			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
 		}
-		if($3->getType().type!=cint&&$3->getType().type!=cfloat)
-		{
-			std::cerr<<"Error : Invalid type on rhs of relational expression in line number "<<Parser::line_no<<"."<<std::endl;
-			exit(0);
-		}
-		$$=new op_ast($1,$3,1003);
+		$$=new op_ast(e1,e2,1003);
 	}
 	| equality_expression NE_OP relational_expression
 	{
@@ -410,12 +419,21 @@ equality_expression
 			std::cerr<<"Error : Using operation on an array variable in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
 		}
-		if(!($1->getType()==$3->getType()))
+		exp_ast *e1 = $1, *e2 = $3;
+		if(($1)->getType().type == cint && ($3)->getType().type == cfloat)
+		{
+			e1 = new cast_float_ast($1);
+		}
+		else if(($1)->getType().type == cfloat && ($3)->getType().type == cint)
+		{
+			e2 = new cast_float_ast($3);
+		}
+		if(!(e1->getType()==e2->getType()))
 		{
 			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
 		}
-		$$=new op_ast($1,$3,1004);
+		$$=new op_ast(e1,e2,1004);
 	}
 	;
 
@@ -436,25 +454,20 @@ relational_expression
 			std::cerr<<"Error : Using operation on an array variable in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
 		}
-
 		exp_ast *e1 = $1, *e2 = $3;
-
 		if(($1)->getType().type == cint && ($3)->getType().type == cfloat)
 		{
 			e1 = new cast_float_ast($1);
 		}
-
 		else if(($1)->getType().type == cfloat && ($3)->getType().type == cint)
 		{
 			e2 = new cast_float_ast($3);
 		}
-
 		if(!(e1->getType()==e2->getType()))
 		{
 			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
 		}
-
 		$$=new op_ast(e1,e2,'<');
 	}
 	| relational_expression '>' additive_expression
@@ -469,19 +482,15 @@ relational_expression
 			std::cerr<<"Error : Using operation on an array variable in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
 		}
-
 		exp_ast *e1 = $1, *e2 = $3;
-
 		if(($1)->getType().type == cint && ($3)->getType().type == cfloat)
 		{
 			e1 = new cast_float_ast($1);
 		}
-
 		else if(($1)->getType().type == cfloat && ($3)->getType().type == cint)
 		{
 			e2 = new cast_float_ast($3);
 		}
-
 		if(!(e1->getType()==e2->getType()))
 		{
 			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
@@ -502,19 +511,15 @@ relational_expression
 			std::cerr<<"Error : Using operation on an array variable in line number "<<Parser::line_no<<"."<<std::endl;
 			exit(0);
 		}
-
 		exp_ast *e1 = $1, *e2 = $3;
-
 		if(($1)->getType().type == cint && ($3)->getType().type == cfloat)
 		{
 			e1 = new cast_float_ast($1);
 		}
-
 		else if(($1)->getType().type == cfloat && ($3)->getType().type == cint)
 		{
 			e2 = new cast_float_ast($3);
 		}
-
 		if(!(e1->getType()==e2->getType()))
 		{
 			std::cerr<<"Error : Type mismatch in line number "<<Parser::line_no<<"."<<std::endl;
