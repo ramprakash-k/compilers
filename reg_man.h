@@ -104,10 +104,11 @@ public:
 		//cout<<endl;
 	}
 	void push() {
-		for(list<int>::iterator i=used.begin();i!=used.end();i++)
+		while(!used.empty())
 		{
+			list<int>::iterator i = used.begin();
 			moveToStack(*i);
-			used.remove(*i);
+			used.pop_front();
 			fcount[*i]++;
 			regs.push_back(*i);
 		}
