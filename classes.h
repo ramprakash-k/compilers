@@ -295,6 +295,8 @@ private:
 	map<string,g_entry *> glo;
 };
 
+extern global_sym g_sym;
+
 class abstract_astnode {
 public:
 	virtual void print (int n)  = 0;
@@ -901,6 +903,25 @@ public:
 					regman.free(expr[i]->result);
 			}
 		}
+		else
+		{
+			list<int> temp = regman.used_list();
+			regman.push();
+			for(int i=0;i<(int)(expr.size());i++)
+			{
+				expr[i]->generate_code();
+				code<<"\tpush"<<((expr[i]->getType().type==cint)?"i":"f")
+					<<"("<<expr[i]->result<<");"<<endl;
+				if(!expr[i]->isImmediate)
+					regman.free(expr[i]->result);
+			}
+			basicType ret = g_sym.present(name).second;
+			if(ret!=cvoid)
+				code<<"\tpush"<<((ret==cint)?"i":"f")<<"(0);"<<endl;
+			string reg = regman.pop(temp,true,ret);
+			result = reg;
+			isImmediate = false;
+		}
 	}
 private:
 	vector<exp_ast *> expr;
@@ -933,8 +954,7 @@ public:
 			cout<<")";
 		}
 	}
-	void cast(basicType t, int i)
-	{
+	void cast(basicType t, int i) {
 		exp_ast *castast;
 		if(t == cint) {
 			castast = new cast_int_ast(expr[i]);
@@ -954,6 +974,23 @@ public:
 				if(!expr[i]->isImmediate)
 					regman.free(expr[i]->result);
 			}
+		}
+		else
+		{
+			list<int> temp = regman.used_list();
+			regman.push();
+			for(int i=0;i<(int)(expr.size());i++)
+			{
+				expr[i]->generate_code();
+				code<<"\tpush"<<((expr[i]->getType().type==cint)?"i":"f")
+					<<"("<<expr[i]->result<<");"<<endl;
+				if(!expr[i]->isImmediate)
+					regman.free(expr[i]->result);
+			}
+			basicType ret = g_sym.present(name).second;
+			if(ret!=cvoid)
+				code<<"\tpush"<<((ret==cint)?"i":"f")<<"(0);"<<endl;
+			string reg = regman.pop(temp,false,ret);
 		}
 	}
 private:
