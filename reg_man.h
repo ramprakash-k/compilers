@@ -137,7 +137,7 @@ public:
 			code<<"\tload"<<((ret==cint)?"i":"f")
 				<<"(ind(esp),"<<reg<<");"<<endl;
 		}
-		code<<"\taddi(esp,"<<off<<");"<<endl;
+		code<<"\taddi("<<off<<",esp);"<<endl;
 		return reg;
 	}
 private:
