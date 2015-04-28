@@ -907,6 +907,9 @@ public:
 		{
 			list<int> temp = regman.used_list();
 			regman.push();
+			basicType ret = g_sym.present(name).second;
+			if(ret!=cvoid)
+				code<<"\tpush"<<((ret==cint)?"i":"f")<<"(0);"<<endl;
 			for(int i=0;i<(int)(expr.size());i++)
 			{
 				expr[i]->generate_code();
@@ -915,10 +918,13 @@ public:
 				if(!expr[i]->isImmediate)
 					regman.free(expr[i]->result);
 			}
-			basicType ret = g_sym.present(name).second;
-			if(ret!=cvoid)
-				code<<"\tpush"<<((ret==cint)?"i":"f")<<"(0);"<<endl;
-			string reg = regman.pop(temp,true,ret);
+			code<<"\t"<<name<<"();"<<endl;
+			for(int i=(int)(expr.size())-1;i>=0;i--)
+			{
+				code<<"\tpop"<<((expr[i]->getType().type==cint)?"i":"f")
+					<<"(1);"<<endl;
+			}
+			string reg = regman.pop(temp,false,ret);
 			result = reg;
 			isImmediate = false;
 		}
@@ -979,6 +985,9 @@ public:
 		{
 			list<int> temp = regman.used_list();
 			regman.push();
+			basicType ret = g_sym.present(name).second;
+			if(ret!=cvoid)
+				code<<"\tpush"<<((ret==cint)?"i":"f")<<"(0);"<<endl;
 			for(int i=0;i<(int)(expr.size());i++)
 			{
 				expr[i]->generate_code();
@@ -987,9 +996,12 @@ public:
 				if(!expr[i]->isImmediate)
 					regman.free(expr[i]->result);
 			}
-			basicType ret = g_sym.present(name).second;
-			if(ret!=cvoid)
-				code<<"\tpush"<<((ret==cint)?"i":"f")<<"(0);"<<endl;
+			code<<"\t"<<name<<"();"<<endl;
+			for(int i=(int)(expr.size())-1;i>=0;i--)
+			{
+				code<<"\tpop"<<((expr[i]->getType().type==cint)?"i":"f")
+					<<"(1);"<<endl;
+			}
 			regman.pop(temp,false,ret);
 		}
 	}
