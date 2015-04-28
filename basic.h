@@ -1,6 +1,9 @@
 #ifndef BASIC_H
 #define BASIC_H
 
+#include <string>
+using namespace std;
+
 enum basicType
 {
 	cint,
