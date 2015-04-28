@@ -74,11 +74,8 @@ public:
 			cerr<<"Error: Register Manager "<<reg<<" "<<fcount[left]<<" "<<fcount[right]<<endl;
 		}
 	}
-	list<string> used_list() {
-		list<string> temp;
-		for(__typeof(used.begin()) i = used.begin();i!=used.end();i++)
-			temp.push_back(numtoreg(*i));
-		return temp;
+	list<int> used_list() {
+		return used;
 	}
 	int getf(string reg) {
 		return fcount[regtonum(reg)];
@@ -105,6 +102,37 @@ public:
 			used.pop_front();
 		}
 		//cout<<endl;
+	}
+	void push() {
+		for(list<int>::iterator i=used.begin();i!=used.end();i++)
+		{
+			moveToStack(*i);
+			used.remove(*i);
+			fcount[*i]++;
+			regs.push_back(*i);
+		}
+	}
+	string pop(list<int> t,bool flag, basicType ret) {
+		int offset=sizeofbt(ret);
+		list<int>::iterator i = t.end();
+		do
+		{
+			i--;
+			getFromStack(*i);
+			fcount[*i]--;
+			regs.remove(*i);
+			used.push_back(*i);
+		} while(i!=t.begin());
+		string reg = "cvoid";
+		if(flag && ret != cvoid)
+		{
+			reg = allocate(ret);
+			code<<"\tload"<<((ret==cint)?"i":"f")
+				<<"(ind(esp),"<<reg<<");"<<endl;
+			code<<"\tpop"<<((ret==cint)?"i":"f")
+				<<"(1);"<<endl;
+		}
+		return reg;
 	}
 private:
 	list<int> regs;
