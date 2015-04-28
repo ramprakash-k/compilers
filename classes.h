@@ -904,7 +904,7 @@ public:
 				code<<"\tpop"<<((expr[i]->getType().type==cint)?"i":"f")
 					<<"(1);"<<endl;
 			}
-			string reg = regman.pop(temp,false,ret);
+			string reg = regman.pop(temp,true,ret);
 			result = reg;
 			isImmediate = false;
 		}
