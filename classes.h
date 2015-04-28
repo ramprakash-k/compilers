@@ -910,7 +910,7 @@ public:
 			basicType ret = g_sym.present(name).second;
 			if(ret!=cvoid)
 				code<<"\tpush"<<((ret==cint)?"i":"f")<<"(0);"<<endl;
-			for(int i=0;i<(int)(expr.size());i++)
+			for(int i=(int)(expr.size())-1;i>=0;i--)
 			{
 				expr[i]->generate_code();
 				code<<"\tpush"<<((expr[i]->getType().type==cint)?"i":"f")
@@ -919,7 +919,7 @@ public:
 					regman.free(expr[i]->result);
 			}
 			code<<"\t"<<name<<"();"<<endl;
-			for(int i=(int)(expr.size())-1;i>=0;i--)
+			for(int i=0;i<(int)(expr.size());i++)
 			{
 				code<<"\tpop"<<((expr[i]->getType().type==cint)?"i":"f")
 					<<"(1);"<<endl;
@@ -988,7 +988,7 @@ public:
 			basicType ret = g_sym.present(name).second;
 			if(ret!=cvoid)
 				code<<"\tpush"<<((ret==cint)?"i":"f")<<"(0);"<<endl;
-			for(int i=0;i<(int)(expr.size());i++)
+			for(int i=(int)(expr.size())-1;i>=0;i--)
 			{
 				expr[i]->generate_code();
 				code<<"\tpush"<<((expr[i]->getType().type==cint)?"i":"f")
@@ -997,7 +997,7 @@ public:
 					regman.free(expr[i]->result);
 			}
 			code<<"\t"<<name<<"();"<<endl;
-			for(int i=(int)(expr.size())-1;i>=0;i--)
+			for(int i=0;i<(int)(expr.size());i++)
 			{
 				code<<"\tpop"<<((expr[i]->getType().type==cint)?"i":"f")
 					<<"(1);"<<endl;
