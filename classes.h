@@ -990,7 +990,7 @@ public:
 			basicType ret = g_sym.present(name).second;
 			if(ret!=cvoid)
 				code<<"\tpush"<<((ret==cint)?"i":"f")<<"(0);"<<endl;
-			string reg = regman.pop(temp,false,ret);
+			regman.pop(temp,false,ret);
 		}
 	}
 private:
