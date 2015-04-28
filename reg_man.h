@@ -113,16 +113,6 @@ public:
 		}
 	}
 	string pop(list<int> t,bool flag, basicType ret) {
-		int offset=sizeofbt(ret);
-		list<int>::iterator i = t.end();
-		do
-		{
-			i--;
-			getFromStack(*i);
-			fcount[*i]--;
-			regs.remove(*i);
-			used.push_back(*i);
-		} while(i!=t.begin());
 		string reg = "cvoid";
 		if(flag && ret != cvoid)
 		{
@@ -132,6 +122,15 @@ public:
 			code<<"\tpop"<<((ret==cint)?"i":"f")
 				<<"(1);"<<endl;
 		}
+		list<int>::iterator i = t.end();
+		do
+		{
+			i--;
+			getFromStack(*i);
+			fcount[*i]--;
+			regs.remove(*i);
+			used.push_back(*i);
+		} while(i!=t.begin());
 		return reg;
 	}
 private:
