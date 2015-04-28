@@ -114,23 +114,30 @@ public:
 	}
 	string pop(list<int> t,bool flag, basicType ret) {
 		string reg = "cvoid";
+		int off = sizeofbt(ret);
+		list<int>::iterator i = t.end();
+		if(t.size()>0)
+		{
+			do
+			{
+				i--;
+				string reg = numtoreg(*i);
+				basicType temp = types[*i][types[*i].size()-1];
+				code<<"\tload"<<((temp==cint)?"i":"f")
+					<<"(ind(esp,"<<off<<"),"<<reg<<");"<<endl;
+				off += sizeofbt(temp);
+				fcount[*i]--;
+				regs.remove(*i);
+				used.push_back(*i);
+			} while(i!=t.begin());
+		}
 		if(flag && ret != cvoid)
 		{
 			reg = allocate(ret);
 			code<<"\tload"<<((ret==cint)?"i":"f")
 				<<"(ind(esp),"<<reg<<");"<<endl;
-			code<<"\tpop"<<((ret==cint)?"i":"f")
-				<<"(1);"<<endl;
 		}
-		list<int>::iterator i = t.end();
-		do
-		{
-			i--;
-			getFromStack(*i);
-			fcount[*i]--;
-			regs.remove(*i);
-			used.push_back(*i);
-		} while(i!=t.begin());
+		code<<"\taddi(esp,"<<off<<");"<<endl;
 		return reg;
 	}
 private:
