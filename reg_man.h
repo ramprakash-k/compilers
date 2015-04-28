@@ -74,8 +74,11 @@ public:
 			cerr<<"Error: Register Manager "<<reg<<" "<<fcount[left]<<" "<<fcount[right]<<endl;
 		}
 	}
-	int reg_in_use() {
-		return used.size();
+	list<string> used_list() {
+		list<string> temp;
+		for(__typeof(used.begin()) i = used.begin();i!=used.end();i++)
+			temp.push_back(numtoreg(*i));
+		return temp;
 	}
 	int getf(string reg) {
 		return fcount[regtonum(reg)];
